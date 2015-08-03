@@ -21,29 +21,32 @@ int clientSocket, portNum, nBytes, bytes, x, server_port;
 struct sockaddr_in serverAddr;
 struct sockaddr_storage serverStorage;
 socklen_t addr_size;
-char server_ip[255];
+char* server_ip;
 
 int main(int argc, char** argv){
 
 	// ./client_udp 127.0.0.1 7891 90 0  IP Port Quality Webcam
 	param[0] = CV_IMWRITE_JPEG_QUALITY;			// set tipe encoding 
-	param[1] = 90;					// set kualitas encoding
-	
-	/* Inisialisasi Socket Client */
+	param[1] = atoi(argv[3]);					// set kualitas encoding
 
-	strcpy(server_ip, "127.0.0.1");					
-	server_port = 7891;				// Port Server yang dituju
-	clientSocket = socket(PF_INET, SOCK_DGRAM, 0);	// membuka koneksi UDP
-	serverAddr.sin_family = AF_INET;
-	serverAddr.sin_port = htons(server_port);		// Membuka Port Server
-	serverAddr.sin_addr.s_addr = inet_addr(server_ip);	// Membuka IP Server
-	memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);  
-	addr_size = sizeof serverAddr;	
-	/* Inisialisasi Socket Client */
-
-	VideoCapture cap(0);			// Membuka Kamera
-	// cap.set(CV_CAP_PROP_FRAME_WIDTH, 640);		// Set Lebar gambar
-	// cap.set(CV_CAP_PROP_FRAME_HEIGHT, 360);		// Set tinggi Gambar
+	strcpy(server_ip, "127.0.0.1");						// IP Server yang dituju
+	server_port = 7891;	
+        
+    // Initialize Streaming Connection
+	struct  	sockaddr_in serverAddr;
+	socklen_t 	serverAddrLen = sizeof(serverAddr);
+    clientSocket = socket(PF_INET, SOCK_STREAM, 0);
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_addr.s_addr = inet_addr(server_ip);
+    serverAddr.sin_port = htons(server_port);
+	// Initialize Streaming Connection
+		
+	// Connect to Server
+    connect(clientSocket, (sockaddr*)&serverAddr, serverAddrLen);
+    
+	VideoCapture cap(atoi(argv[4]));			// Membuka Kamera
+	cap.set(CV_CAP_PROP_FRAME_WIDTH, 640);		// Set Lebar gambar
+	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 360);		// Set tinggi Gambar
 
 
 	if(!cap.isOpened())
@@ -66,8 +69,8 @@ int main(int argc, char** argv){
 	}
     
 	nBytes = buff.size();
-	bytes = sendto(clientSocket,encoded_image,nBytes,0,(struct sockaddr *)&serverAddr,addr_size);	// mengirim data ke server
-    cout<<buff.size()<<" Bytes Sent"<<endl;
+	bytes = send(clientSocket, encoded_image, nBytes, 0);
+	cout<<buff.size()<<" Bytes Sent"<<endl;
     memset(&encoded_image[0], 0, nBytes);			// men-clear buffer gambar
 	}
   return 0;
