@@ -1,4 +1,4 @@
-# video streamer
+# Video Streamer
 This is a class project of multimedia technology. Creating a video streamer using sockeet programming and OpenCV in C Language. Still contain many bugs, but contain pretty much all the basic stuff to stream a video via UDP or TCP with OpenCV.
 Consist of 6 Files :
 
