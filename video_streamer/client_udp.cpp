@@ -21,18 +21,17 @@ int clientSocket, portNum, nBytes, bytes, x, server_port;
 struct sockaddr_in serverAddr;
 struct sockaddr_storage serverStorage;
 socklen_t addr_size;
-char server_ip[255];
+char* server_ip;
 
 int main(int argc, char** argv){
 
 	// ./client_udp 127.0.0.1 7891 90 0  IP Port Quality Webcam
 	param[0] = CV_IMWRITE_JPEG_QUALITY;			// set tipe encoding 
-	param[1] = 90;					// set kualitas encoding
+	param[1] = atoi(argv[3]);					// set kualitas encoding
 	
 	/* Inisialisasi Socket Client */
-
-	strcpy(server_ip, "127.0.0.1");					
-	server_port = 7891;				// Port Server yang dituju
+	server_ip 	= argv[1];						// IP Server yang dituju
+	server_port = atoi(argv[2]);				// Port Server yang dituju
 	clientSocket = socket(PF_INET, SOCK_DGRAM, 0);	// membuka koneksi UDP
 	serverAddr.sin_family = AF_INET;
 	serverAddr.sin_port = htons(server_port);		// Membuka Port Server
@@ -41,9 +40,9 @@ int main(int argc, char** argv){
 	addr_size = sizeof serverAddr;	
 	/* Inisialisasi Socket Client */
 
-	VideoCapture cap(0);			// Membuka Kamera
-	// cap.set(CV_CAP_PROP_FRAME_WIDTH, 640);		// Set Lebar gambar
-	// cap.set(CV_CAP_PROP_FRAME_HEIGHT, 360);		// Set tinggi Gambar
+	VideoCapture cap(atoi(argv[4]));			// Membuka Kamera
+	cap.set(CV_CAP_PROP_FRAME_WIDTH, 640);		// Set Lebar gambar
+	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 360);		// Set tinggi Gambar
 
 
 	if(!cap.isOpened())
