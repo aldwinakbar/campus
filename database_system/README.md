@@ -3,3 +3,5 @@ This is a class final project of database system. Using basic knowledge on using
 
 - proyek_akhir.sql ( the database )
 - everything else ( html + php )
+- change database password in database/connection.php
+- password and username is administrator

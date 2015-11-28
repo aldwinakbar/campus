@@ -3,9 +3,9 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Dec 08, 2014 at 04:51 PM
--- Server version: 5.5.40-0ubuntu0.14.04.1
--- PHP Version: 5.5.9-1ubuntu4.5
+-- Generation Time: Nov 28, 2015 at 05:33 PM
+-- Server version: 5.5.44-0ubuntu0.14.04.1
+-- PHP Version: 5.5.9-1ubuntu4.13
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
@@ -739,12 +739,7 @@ CREATE TABLE IF NOT EXISTS `user` (
 --
 
 INSERT INTO `user` (`id_user`, `password`, `nama_lengkap`, `email`, `level`) VALUES
-('aldwinakbar', 'f2c636e871dd191250dda6a67ebb00a1', 'Aldwin Akbar', 'aldwin@gmail.com', 'admin'),
-('andira', 'eb7c4cd1d45435bcafa9cdf55acf7667', 'Andira Rozawati', 'andira@rozawati.com', 'admin'),
-('yussanti', 'e246488c57d38d26e202c5692e0e1742', 'Yussanti Nur Fajrina', 'yussanti@nurfajrina.com', 'admin'),
-('muhammad', 'febc347f1035318b48f4c82c5529649f', 'Muhammad Taqiyuddin', 'muhammad@taqiyuddin.com', 'user'),
-('admin', '0ebe1a5df6f3b2d927dfbf760aa8b0b9', 'Administrator', 'aldwin@hermanudin.com', 'admin'),
-('tomi', '68e2f0d930c248f3fc12009e29edb6a7', 'Tomi', 'tomi@tomi.com', 'admin');
+('admininstrator', 'b64d11ac02225d0108763ee25e95a105', 'admininstrator', 'admininstrator@admininstrator.admininstrator', 'admin');
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
