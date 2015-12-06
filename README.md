@@ -1,4 +1,9 @@
 # Campus Project
-Every class project on Computer Engineering in University of Indonesia
+Every class project on Computer Engineering in University of Indonesia. 
+How to build c or cpp files :
 
-- build.sh ( run & place this in the same directory to fast-compile everything in the directory )
+- cd to any of the directory
+- run ../build.sh
+- it will build every c and cpp files in that directory
+
+notes : some projects need OpenCV 2.4.9 library, be sure to install in first. 
