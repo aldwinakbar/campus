@@ -27,7 +27,7 @@ int main(int argc, char** argv){
 	udpSocket = socket(AF_INET, SOCK_DGRAM, 0);		// membuka koneksi UDP
 	serverAddr.sin_family = AF_INET;
 	serverAddr.sin_port = htons(server_port);		// membuka port
-	serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");	
+	serverAddr.sin_addr.s_addr = INADDR_ANY;	
 	memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);  
 	bind(udpSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
 	addr_size = sizeof serverStorage;
