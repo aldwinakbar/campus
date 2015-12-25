@@ -45,14 +45,15 @@ int main(int argc , char *argv[])
     }
     
     char port_data_http[] = "50002";
-    sprintf(message,"POST %s HTTP/1.1\nHost: %s\nContent-length: 10\nContent-Type: application/x-www-form-urlencoded\nConnection: close\n\nport=%s\n",argv[2],argv[1],port_data_http);
+    //sprintf(message,"POST %s HTTP/1.1\nHost: %s\nContent-length: 10\nContent-Type: application/x-www-form-urlencoded\nConnection: close\n\nport=%s\n",argv[2],argv[1],port_data_http);
     //sprintf(message,"GET %s HTTP/1.1\r\nHost: %s\r\n\r\n",argv[2],argv[1]);
     //sprintf(message,"POST /mikon.php HTTP/1.1\nHost: 127.0.0.1\nContent-length: 12\nContent-Type: application/x-www-form-urlencoded\nConnection: close\n\nuid=a1s2d3f4\n");
-    //sprintf(message,"GET /mikon.php?uid=a1s2d3f4 HTTP/1.1\r\nHost: 192.168.1.4\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\n");
+    sprintf(message,"GET /mikon.php?uid=a1s2d3f4 HTTP/1.1\r\nHost: 192.168.43.53\r\n\r\n");
     //sprintf(message,"GET /mikon.php HTTP/1.1\r\nHost: 192.168.1.4\r\n\r\n");
      
     puts("Connected\n");
-     
+    printf("Message size %d\n",(int)strlen(message));
+    
     //Send some data
     if( send(socket_desc , message , strlen(message) , 0) < 0)
     {
