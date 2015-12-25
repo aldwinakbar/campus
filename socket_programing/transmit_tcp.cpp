@@ -1,10 +1,19 @@
 /*
     C ECHO client example using sockets
 */
-#include<stdio.h> //printf
-#include<string.h>    //strlen
-#include<sys/socket.h>    //socket
-#include<arpa/inet.h> //inet_addr
+
+#include <stdio.h>
+#include <string.h>    //strlen
+#include <stdlib.h>    //strlen
+#include <sys/socket.h>
+#include <arpa/inet.h> //inet_addr
+#include <unistd.h>    //write
+#include <pthread.h> //for threading , link with lpthread
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <sys/time.h>
+#include <netinet/in.h>
  
 int main(int argc , char *argv[])
 {

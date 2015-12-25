@@ -1,10 +1,19 @@
 /************* UDP SERVER CODE *******************/
 
+
 #include <stdio.h>
+#include <string.h>    //strlen
+#include <stdlib.h>    //strlen
 #include <sys/socket.h>
+#include <arpa/inet.h> //inet_addr
+#include <unistd.h>    //write
+#include <pthread.h> //for threading , link with lpthread
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <sys/time.h>
 #include <netinet/in.h>
-#include <string.h>
-#include <stdlib.h>
+#include <ctype.h>
 
 int main(){
   int udpSocket, nBytes;
