@@ -55,8 +55,6 @@ intRead = atoi(bufferRead);
 //Ada bit 0 diakhir setiap ngirim data. Buat filter di mikon untuk nge-abaikaan 0
 //serialWrite(Integer yang ingin dikirim, Besar Bilangan Integernya)
 //Contoh : serialWrite(123,3);}
-
-
 void serialWrite(int dataOut1, int dataWrite){
 //Lihat diarduino, awalnya startFlag emang 8 dan stopFlag 9 namun karena
 //ada bug di algoritma untuk ngubah asci jadi int == >  karena num=calc() +1; 
