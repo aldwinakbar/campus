@@ -1,0 +1,7 @@
+set(_CATKIN_CURRENT_PACKAGE "imu_tools")
+set(imu_tools_MAINTAINER "Martin Günther <martin.guenther1980@gmail.com>, Ivan Dryanovski <ivan.dryanovski@gmail.com>")
+set(imu_tools_DEPRECATED "")
+set(imu_tools_VERSION "1.0.10")
+set(imu_tools_BUILD_DEPENDS )
+set(imu_tools_RUN_DEPENDS "imu_complementary_filter" "imu_filter_madgwick" "rviz_imu_plugin")
+set(imu_tools_BUILDTOOL_DEPENDS "catkin")

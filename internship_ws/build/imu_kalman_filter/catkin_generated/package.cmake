@@ -1,0 +1,7 @@
+set(_CATKIN_CURRENT_PACKAGE "imu_kalman_filter")
+set(imu_kalman_filter_MAINTAINER "aldwinakbar <aldwinakbar@todo.todo>")
+set(imu_kalman_filter_DEPRECATED "")
+set(imu_kalman_filter_VERSION "0.0.0")
+set(imu_kalman_filter_BUILD_DEPENDS "mavros_msgs" "roscpp" "rospy" "sensor_msgs" "std_msgs")
+set(imu_kalman_filter_RUN_DEPENDS "mavros_msgs" "roscpp" "rospy" "sensor_msgs" "std_msgs")
+set(imu_kalman_filter_BUILDTOOL_DEPENDS "catkin")

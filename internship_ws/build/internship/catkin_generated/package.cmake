@@ -1,0 +1,7 @@
+set(_CATKIN_CURRENT_PACKAGE "internship")
+set(internship_MAINTAINER "aldwinakbar <aldwinakbar@todo.todo>")
+set(internship_DEPRECATED "")
+set(internship_VERSION "0.0.0")
+set(internship_BUILD_DEPENDS "mavros_msgs" "roscpp" "rospy" "sensor_msgs" "std_msgs")
+set(internship_RUN_DEPENDS "mavros_msgs" "roscpp" "rospy" "sensor_msgs" "std_msgs")
+set(internship_BUILDTOOL_DEPENDS "catkin")

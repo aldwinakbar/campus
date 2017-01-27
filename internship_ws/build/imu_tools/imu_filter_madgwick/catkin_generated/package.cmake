@@ -1,0 +1,7 @@
+set(_CATKIN_CURRENT_PACKAGE "imu_filter_madgwick")
+set(imu_filter_madgwick_MAINTAINER "Martin Günther <martin.guenther1980@gmail.com>, Ivan Dryanovski <ivan.dryanovski@gmail.com>")
+set(imu_filter_madgwick_DEPRECATED "")
+set(imu_filter_madgwick_VERSION "1.0.10")
+set(imu_filter_madgwick_BUILD_DEPENDS "roscpp" "sensor_msgs" "geometry_msgs" "tf2" "tf2_ros" "nodelet" "pluginlib" "message_filters" "dynamic_reconfigure")
+set(imu_filter_madgwick_RUN_DEPENDS "roscpp" "sensor_msgs" "geometry_msgs" "tf2" "tf2_ros" "nodelet" "pluginlib" "message_filters" "dynamic_reconfigure")
+set(imu_filter_madgwick_BUILDTOOL_DEPENDS "catkin")

@@ -1,0 +1,7 @@
+set(_CATKIN_CURRENT_PACKAGE "rviz_imu_plugin")
+set(rviz_imu_plugin_MAINTAINER "Martin Günther <martin.guenther1980@gmail.com>, Ivan Dryanovski <ivan.dryanovski@gmail.com>")
+set(rviz_imu_plugin_DEPRECATED "")
+set(rviz_imu_plugin_VERSION "1.0.10")
+set(rviz_imu_plugin_BUILD_DEPENDS "rviz")
+set(rviz_imu_plugin_RUN_DEPENDS "rviz")
+set(rviz_imu_plugin_BUILDTOOL_DEPENDS "catkin")

@@ -1,0 +1,8 @@
+prefix=/home/aldwinakbar/Dropbox/Projects/campus/personal/internship_ws/devel
+
+Name: imu_kalman_filter
+Description: Description of imu_kalman_filter
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/aldwinakbar/Dropbox/Projects/campus/personal/internship_ws/devel/lib 
+Requires: 

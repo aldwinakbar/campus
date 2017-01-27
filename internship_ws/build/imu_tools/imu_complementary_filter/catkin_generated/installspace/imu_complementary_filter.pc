@@ -1,0 +1,8 @@
+prefix=/home/aldwinakbar/Dropbox/Projects/campus/personal/internship_ws/install
+
+Name: imu_complementary_filter
+Description: Description of imu_complementary_filter
+Version: 1.0.10
+Cflags: -I/home/aldwinakbar/Dropbox/Projects/campus/personal/internship_ws/install/include
+Libs: -L/home/aldwinakbar/Dropbox/Projects/campus/personal/internship_ws/install/lib -lcomplementary_filter
+Requires: message_filters roscpp sensor_msgs std_msgs tf

@@ -107,7 +107,7 @@ void serialWrite(const char* data_out, int data_size){
 
 
 int main(){
-	serialStart(portACM, B9600,READ_SIZE);
+	serialStart(portACM, B9600);
 	while(1){
 		serialRead(8);
 		printf("You entered: %s\n", bufferRead);

@@ -1,0 +1,8 @@
+prefix=/home/aldwinakbar/Dropbox/Projects/campus/personal/internship_ws/install
+
+Name: rviz_imu_plugin
+Description: Description of rviz_imu_plugin
+Version: 1.0.10
+Cflags: 
+Libs: -L/home/aldwinakbar/Dropbox/Projects/campus/personal/internship_ws/install/lib 
+Requires: rviz

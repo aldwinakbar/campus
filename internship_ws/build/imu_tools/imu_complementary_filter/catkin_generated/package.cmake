@@ -1,0 +1,7 @@
+set(_CATKIN_CURRENT_PACKAGE "imu_complementary_filter")
+set(imu_complementary_filter_MAINTAINER "Roberto G. Valenti <robertogl.valenti@gmail.com>")
+set(imu_complementary_filter_DEPRECATED "")
+set(imu_complementary_filter_VERSION "1.0.10")
+set(imu_complementary_filter_BUILD_DEPENDS "cmake_modules" "message_filters" "roscpp" "sensor_msgs" "std_msgs" "tf")
+set(imu_complementary_filter_RUN_DEPENDS "message_filters" "roscpp" "sensor_msgs" "std_msgs" "tf")
+set(imu_complementary_filter_BUILDTOOL_DEPENDS "catkin")
