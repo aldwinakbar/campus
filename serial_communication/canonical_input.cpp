@@ -88,20 +88,22 @@ int serialStart(const char* portname, speed_t baud){
 	return 1;
 }
 
+
 void serialRead(int dataRead){
 	// Now, let's wait for an input from the serial port.
-	tcflush(fd, TCIOFLUSH);
+	clearIOQueue();
 	fcntl(fd, F_SETFL, 0); // block until data comes in
 	read(fd, bufferRead, dataRead);
 }
 
 void serialWrite(const char* data_out, int data_size){
-	tcflush(fd, TCIOFLUSH);
-	sprintf(bufferWrite,"%s\r\n",data_out);
-	int n = write(fd, bufferWrite, data_size+3);
+	clearIOQueue();
+	sprintf(bufferWrite,"%s",data_out);
+	int n = write(fd, bufferWrite, data_size);
 	if (n < 0)
-		fputs("write() of 4 bytes failed!\n", stderr);
+		fputs("write() failed!\n", stderr);
 }
+
 
 // ###################################### Serial Communication ################################################ //
 
