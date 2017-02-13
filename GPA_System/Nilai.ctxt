@@ -1,0 +1,13 @@
+#BlueJ class context
+comment0.params=nilai\ angka
+comment0.target=Nilai(java.lang.String,\ double)
+comment0.text=\ \n\ Nilai\ Constructor\n\ \n\ @param\ nilai\ String\ -\ nilai\ value\n\ @param\ angka\ double\ -\ nilai\ value\ untuk\ konversi\n
+comment1.params=nilai
+comment1.target=Nilai\ parseString(java.lang.String)
+comment1.text=\n\ Convert\ nilai\ in\ String\ into\ it's\ corresponding\ ENUM-Class\ Nilai\n\ \n\ @param\ nilai\ String\ -\ nilai\ value\ in\ String\n\ @return\ Nilai\ The\ ENUM-Class\ Nilai\ corresponding\ to\ String\ nilai.\n
+comment2.params=
+comment2.target=double\ getValue()
+comment2.text=\n\ Get\ the\ quantitative\ value\ of\ Nilai\n\ \n\ @return\ double\ The\ nilai\ value\ in\ quantitative\ representation\n
+comment3.params=
+comment3.target=java.lang.String\ getHuruf()
+numComments=4

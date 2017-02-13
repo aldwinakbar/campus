@@ -1,0 +1,23 @@
+#BlueJ class context
+comment0.params=namaMataKuliah\ sksMK\ semesterMK
+comment0.target=MataKuliah(java.lang.String,\ int,\ int)
+comment0.text=\n\ Constructor\ for\ objects\ of\ class\ MataKuliah\n
+comment1.params=
+comment1.target=java.lang.String\ getNamaMK()
+comment2.params=namaMK
+comment2.target=void\ setNamaMK(java.lang.String)
+comment3.params=
+comment3.target=int\ getSKS()
+comment4.params=sks
+comment4.target=void\ setSKS(int)
+comment5.params=
+comment5.target=int\ getSemester()
+comment6.params=semester
+comment6.target=void\ setSemester(int)
+comment7.params=
+comment7.target=java.lang.String\ getNilai()
+comment8.params=nilai
+comment8.target=void\ setNilai(java.lang.String)
+comment9.params=
+comment9.target=double\ hitungBobot()
+numComments=10

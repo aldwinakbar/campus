@@ -1,0 +1,7 @@
+#BlueJ class context
+comment0.params=deskripsi
+comment0.target=TipeLayanan(java.lang.String)
+comment0.text=\n\ TipeLayanan\ Constructor\n\n\ @param\ deskripsi\ ialah\ deskripsi\ mengenai\ TipeLayanan\ tersebut\n
+comment1.params=
+comment1.target=java.lang.String\ toString()
+numComments=2

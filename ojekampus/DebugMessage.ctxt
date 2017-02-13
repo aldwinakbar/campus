@@ -1,0 +1,18 @@
+#BlueJ class context
+comment0.params=debug
+comment0.target=void\ print(java.lang.String)
+comment1.params=debug
+comment1.target=void\ println(java.lang.String)
+comment2.params=
+comment2.target=void\ on()
+comment3.params=
+comment3.target=void\ off()
+comment4.params=
+comment4.target=void\ printOjekDatabase()
+comment5.params=
+comment5.target=void\ printPelangganDatabase()
+comment6.params=
+comment6.target=void\ printPesananDatabase()
+comment7.params=
+comment7.target=void\ printAllDatabase()
+numComments=8
