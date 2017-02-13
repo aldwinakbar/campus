@@ -12,6 +12,8 @@ fi
 
 if [ ! -d "build" ]; then
   echo "build directory doesn't exist."
+  echo "creating build directory...."
+  mkdir build
   EXIT_STATUS=yes
   exit 1
 fi
