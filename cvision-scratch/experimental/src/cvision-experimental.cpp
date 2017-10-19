@@ -5,41 +5,26 @@
 
 
 	using GPixel	= std::pair<cv::Point,uchar>;
-	using BGRPixel  = std::pair<cv::Point,cv::Vec3b>;
+    using BGRPixel  = std::pair<cv::Point,cv::Vec3b>;
+    using SmoothingKernel = std::vector<std::vector<double>>;
 
 	template <class T>	using PixelList = std::vector<T>;
     using MinMaxXY	= std::pair<cv::Point,cv::Point>; 
-    
+
+    template <class T> class PixelListData;
     template <class T> class RegionData;
     template <class T> class PerimeterData;
+    template <class T> class SmoothData;
 
-	template <>
-	class RegionData<BGRPixel> {
 
-        private:
+    template <>
+    class PixelListData<BGRPixel>{
 
-            cv::Mat             original_;
-            cv::Point           user_target_;
-            int                 type_;
-            int                 threshold_;
-            PixelList<BGRPixel>	pixel_list_;
-            MinMaxXY 		    min_max_coor_;
-
-            double colour_distance(cv::Vec3b e1,cv::Vec3b e2){
+    protected:
+        PixelList<BGRPixel>	pixel_list_;
+        MinMaxXY 		    min_max_coor_;
         
-                long rmean = ( (long)e1.val[2] + (long)e2.val[2] ) / 2;
-                long r = (long)e1.val[2] - (long)e2.val[2];
-                long g = (long)e1.val[1] - (long)e2.val[1];
-                long b = (long)e1.val[0] - (long)e2.val[0];
-                return sqrt((((512+rmean)*r*r)>>8) + 4*g*g + (((767-rmean)*b*b)>>8));
-            }
-        
-            bool compare_v3b(cv::Vec3b a, cv::Vec3b b, int threshold){
-                if(colour_distance(a,b) < threshold ) return true;
-                return false;
-            }
-
-            MinMaxXY minmax_coordinate(PixelList<BGRPixel> &region){
+        MinMaxXY minmax_coordinate(PixelList<BGRPixel> &region){
 
                 int x_min = region[0].first.x;
                 int y_min = region[0].first.y;
@@ -57,19 +42,93 @@
                 return std::make_pair(cv::Point(x_min,y_min), cv::Point(x_max+1, y_max+1));
             }
 
-            void normalize_pixel_lists(PixelList<BGRPixel> &region, cv::Point min_coor){
+        void normalize_pixel_lists(PixelList<BGRPixel> &region, cv::Point min_coor){
 
-                for (BGRPixel &value : region){
-                    value.first.x -= min_coor.x;
-                    value.first.y -= min_coor.y;
-                }
+            for (BGRPixel &value : region){
+                value.first.x -= min_coor.x;
+                value.first.y -= min_coor.y;
             }
+        }
 
-            void unnormalize_pixel_lists(PixelList<BGRPixel> &region, cv::Point min_coor){
-                for (BGRPixel &value : region){
-                    value.first.x += min_coor.x;
-                    value.first.y += min_coor.y;
+        void unnormalize_pixel_lists(PixelList<BGRPixel> &region, cv::Point min_coor){
+            for (BGRPixel &value : region){
+                value.first.x += min_coor.x;
+                value.first.y += min_coor.y;
+            }
+        }
+
+    public:
+        virtual void abstract_if_pure_virtual() = 0; 
+
+        MinMaxXY get_min_max_coordinate(){
+            return min_max_coor_;
+        }
+        PixelList<BGRPixel> get_normalized_pixel_list(){
+            return pixel_list_;
+        }
+        PixelList<BGRPixel> get_unnormalized_pixel_list(){
+            PixelList<BGRPixel> temp(pixel_list_);
+            unnormalize_pixel_lists(temp, min_max_coor_.first);
+            return temp;
+        }
+        cv::Mat get_image(){
+            cv::Mat temp(cv::Size(min_max_coor_.second.x, min_max_coor_.second.y), CV_8UC3, cv::Scalar(255,255,255)); 
+            for (BGRPixel value : pixel_list_){
+                temp.at<cv::Vec3b>(value.first.y,value.first.x)[0] = value.second.val[0];
+                temp.at<cv::Vec3b>(value.first.y,value.first.x)[1] = value.second.val[1];
+                temp.at<cv::Vec3b>(value.first.y,value.first.x)[2] = value.second.val[2];
+            }
+            return temp;
+        }
+
+        void display(std::string const &win_name){
+            cv::Mat temp = get_image();
+            cv::namedWindow(win_name, cv::WINDOW_AUTOSIZE);
+            cv::imshow(win_name, temp);
+            cv::waitKey(0);
+        }
+
+        void save_image(const char *name){
+            cv::Mat temp = get_image();
+            cv::imwrite(name, temp);
+        }
+        bool save_list(const char *input_string){
+            std::ofstream myfile (input_string);
+            if (pixel_list_.size() > 0 && myfile.is_open())
+            {
+                for(BGRPixel value : pixel_list_){
+                    myfile << value.first << " " << value.second << "\n";
                 }
+                myfile.close();
+                return true;
+            }
+            else return false;
+        }
+    };
+
+	template <>
+	class RegionData<BGRPixel> : public PixelListData<BGRPixel> {
+        void abstract_if_pure_virtual(){}    
+
+        private:
+
+            cv::Mat             original_;
+            cv::Point           user_target_;
+            int                 type_;
+            int                 threshold_;
+
+            double colour_distance(cv::Vec3b e1,cv::Vec3b e2){
+        
+                long rmean = ( (long)e1.val[2] + (long)e2.val[2] ) / 2;
+                long r = (long)e1.val[2] - (long)e2.val[2];
+                long g = (long)e1.val[1] - (long)e2.val[1];
+                long b = (long)e1.val[0] - (long)e2.val[0];
+                return sqrt((((512+rmean)*r*r)>>8) + 4*g*g + (((767-rmean)*b*b)>>8));
+            }
+        
+            bool compare_v3b(cv::Vec3b a, cv::Vec3b b, int threshold){
+                if(colour_distance(a,b) < threshold ) return true;
+                return false;
             }
 
             void find_region_util(cv::Mat &image,std::vector<std::vector<bool>> &marker, 
@@ -117,14 +176,11 @@
                 PixelList<BGRPixel> region;
 				std::vector<std::vector<bool>> marker(image.cols,std::vector<bool>(image.rows, false));
 				cv::Vec3b target = image.at<cv::Vec3b>(y,x);
-			
                 find_region_util(image,marker,region, x, y, target, type, threshold);
-                
                 return region;
             }
 
-        public:
-            
+        public:       
             RegionData(RegionData<BGRPixel> &input){
                 original_ = input.original_.clone();
                 user_target_ = input.user_target_;
@@ -144,67 +200,29 @@
                 normalize_pixel_lists(pixel_list_, min_max_coor_.first);
             }
 
-            PixelList<BGRPixel> get_normalized_pixel_list(){
-                return pixel_list_;
-            }
-            PixelList<BGRPixel> get_unnormalized_pixel_list(){
-                PixelList<BGRPixel> temp(pixel_list_);
-                unnormalize_pixel_lists(temp, min_max_coor_.first);
-                return temp;
-            }
-            MinMaxXY get_min_max_coordinate(){
-                return min_max_coor_;
-            }
-            cv::Mat get_image(){
-                cv::Mat temp(cv::Size(min_max_coor_.second.x, min_max_coor_.second.y), CV_8UC3, cv::Scalar(255,255,255)); 
-                for (BGRPixel value : pixel_list_){
-                    temp.at<cv::Vec3b>(value.first.y,value.first.x)[0] = value.second.val[0];
-                    temp.at<cv::Vec3b>(value.first.y,value.first.x)[1] = value.second.val[1];
-                    temp.at<cv::Vec3b>(value.first.y,value.first.x)[2] = value.second.val[2];
-                }
-                return temp;
-            }
-
             int get_type(){
                 return type_;
+            }
+
+            cv::Point get_user_target(){
+                return user_target_;
             }
 
             int get_threshold(){
                 return threshold_;
             }
 
-            void display(std::string const &win_name){
-                cv::Mat temp = get_image();
-                cv::namedWindow(win_name, cv::WINDOW_AUTOSIZE);
-                cv::imshow(win_name, temp);
-                cv::waitKey(0);
-            }
-
-            void save_image(const char *name){
-                cv::Mat temp = get_image();
-                cv::imwrite(name, temp);
-            }
-            bool save_list(const char *input_string){
-                std::ofstream myfile (input_string);
-                if (pixel_list_.size() > 0 && myfile.is_open())
-                {
-                    for(BGRPixel value : pixel_list_){
-                        myfile << value.first << " " << value.second << "\n";
-                    }
-                    myfile.close();
-                    return true;
-                }
-                else return false;
+            cv::Mat get_original_image(){
+                return original_;
             }
     };
-    
 
     template <>
-	class PerimeterData<BGRPixel> {
+	class PerimeterData<BGRPixel> : public PixelListData<BGRPixel> {
+        void abstract_if_pure_virtual(){}
 
         private:
             RegionData<BGRPixel>    *region_data_;
-            PixelList<BGRPixel>	    pixel_list_;
 
             PixelList<BGRPixel> find_perimeter (PixelList<BGRPixel> pixel_list, int type){ 
                 PixelList<BGRPixel> perimeter;      
@@ -250,89 +268,163 @@
                 }
                 return perimeter;
             }
-            void unnormalize_pixel_lists(PixelList<BGRPixel> &region, cv::Point min_coor){
-                for (BGRPixel &value : region){
-                    value.first.x += min_coor.x;
-                    value.first.y += min_coor.y;
-                }
-            }
             
         public:
             
             PerimeterData(const PerimeterData<BGRPixel> &input){
                 region_data_ = new RegionData<BGRPixel>(*(input.region_data_));
+                min_max_coor_  = input.region_data_->get_min_max_coordinate();
                 pixel_list_ = input.pixel_list_;
             }
 
             PerimeterData(RegionData<BGRPixel> input){
                 region_data_ = new RegionData<BGRPixel>(input);
+                min_max_coor_  = input.get_min_max_coordinate();
                 pixel_list_ = find_perimeter (input.get_normalized_pixel_list(), input.get_type());
             }
             ~PerimeterData(){
                 delete region_data_;
             }
 
-            RegionData<BGRPixel> get_region_data(){
-                return *region_data_;
-            }
-            
-            PixelList<BGRPixel> get_normalized_pixel_list(){
-                return pixel_list_;
-            }
-
-            PixelList<BGRPixel> get_unnormalized_pixel_list(){
-                PixelList<BGRPixel> temp(pixel_list_);
-                unnormalize_pixel_lists(temp, region_data_->get_min_max_coordinate().first);
-                return temp;
-            }
-            cv::Mat get_image(){
-
-                cv::Mat temp(cv::Size(region_data_->get_min_max_coordinate().second.x, region_data_->get_min_max_coordinate().second.y), CV_8UC3, cv::Scalar(255,255,255)); 
-                for (BGRPixel value : pixel_list_){
-                    temp.at<cv::Vec3b>(value.first.y,value.first.x)[0] = value.second.val[0];
-                    temp.at<cv::Vec3b>(value.first.y,value.first.x)[1] = value.second.val[1];
-                    temp.at<cv::Vec3b>(value.first.y,value.first.x)[2] = value.second.val[2];
-                }
-                return temp;
-            }
-
-            void display(std::string const &win_name){
-                cv::Mat temp = get_image();
-                cv::namedWindow(win_name, cv::WINDOW_AUTOSIZE);
-                cv::imshow(win_name, temp);
-                cv::waitKey(0);
-            }
-
-            void save_image(const char *name){
-                cv::Mat temp = get_image();
-                cv::imwrite(name, temp);
-            }
-            bool save_list(const char *input_string){
-                std::ofstream myfile (input_string);
-                if (pixel_list_.size() > 0 && myfile.is_open())
-                {
-                    for(BGRPixel value : pixel_list_){
-                        myfile << value.first << " " << value.second << "\n";
-                    }
-                    myfile.close();
-                    return true;
-                }
-                else return false;
-            }
-            
+            RegionData<BGRPixel> *get_region_data(){
+                return region_data_;
+            }     
     };
+
+    template<>
+    class SmoothData<BGRPixel> : public PixelListData<BGRPixel> {
+    void abstract_if_pure_virtual(){}
+    private: 
+
+        double  gaussian(double x, double mu, double sigma){
+            return std::exp( -(((x-mu)/(sigma))*((x-mu)/(sigma)))/2.0 );
+        }
+        
+        SmoothingKernel produce_2d_gaussian_kernel (int kernelRadius, double sigma) {
+            std::vector<std::vector<double>> kernel2d(2*kernelRadius+1, std::vector<double>(2*kernelRadius+1));
+            double sum = 0;
+            // compute values
+            for (int row = 0; row < kernel2d.size(); row++)
+              for (int col = 0; col < kernel2d[row].size(); col++) {
+                double x = gaussian(row, kernelRadius, sigma)
+                         * gaussian(col, kernelRadius, sigma);
+                kernel2d[row][col] = x;
+                sum += x;
+              }
+            // normalize
+            for (int row = 0; row < kernel2d.size(); row++)
+              for (int col = 0; col < kernel2d[row].size(); col++)
+                kernel2d[row][col] /= sum;
+            return kernel2d;
+        }
+
+        PixelList<BGRPixel> mat_smoothing(cv::Mat &src, int kernel_radius, double sigma){
+            SmoothingKernel kernel = produce_2d_gaussian_kernel(kernel_radius, sigma);
+            PixelList<BGRPixel> dst; // certain pixel are not initialized
+            int radius = (kernel.size() - 1)/2;
+            int lower_limit = 0 - radius;
+            int upper_limit = radius;
+            float sum[3];
+            for(int y = radius; y < src.rows - radius; y++){
+                for(int x = radius; x < src.cols - radius; x++){
+                    sum[0] = 0.0;
+                    sum[1] = 0.0;
+                    sum[2] = 0.0;
+                    for(int k = lower_limit; k <= upper_limit;k++){
+                        for(int j = lower_limit; j <= upper_limit; j++){
+                            sum[0] = sum[0] + kernel[j+radius][k+radius]*src.at<cv::Vec3b>(y - j, x - k)[0];
+                            sum[1] = sum[1] + kernel[j+radius][k+radius]*src.at<cv::Vec3b>(y - j, x - k)[1];
+                            sum[2] = sum[2] + kernel[j+radius][k+radius]*src.at<cv::Vec3b>(y - j, x - k)[2];
+                        }
+                    }
+                    cv::Vec3b temp;
+                    temp.val[0] = sum[0];
+                    temp.val[1] = sum[1];
+                    temp.val[2] = sum[2];
+                    dst.push_back(std::make_pair(cv::Point(x,y), temp));
+                }
+            }
+            return dst;
+        }
+        
+        PixelList<BGRPixel> region_smoothing(RegionData<BGRPixel> region, int kernel_radius, double sigma){
+            std::vector<std::vector<double>> kernel = produce_2d_gaussian_kernel(kernel_radius, sigma);
+            RegionData<BGRPixel> temp_region = region;
+            PixelList<BGRPixel> temp = region.get_unnormalized_pixel_list();
+            cv::Mat temp_image = region.get_original_image();
+            PixelList<BGRPixel> result;
+
+            int radius = (kernel.size() - 1)/2;
+            int lower_limit = 0 - radius;
+            int upper_limit = radius;
+            float sum[3];
+            int M = temp_region.get_original_image().cols;
+            int N = temp_region.get_original_image().rows;
+
+            for(BGRPixel value : temp){
+                int x = value.first.x;
+                int y = value.first.y;
+                sum[0] = 0.0;
+                sum[1] = 0.0;
+                sum[2] = 0.0;
+                for(int k = lower_limit; k <= upper_limit;k++){
+                    for(int j = lower_limit; j <= upper_limit; j++){
+                        if ((x-k) < 0 || (x-k) >= M || (y - j) < 0 || (y - j) >= N) continue; // inefficient way to be safe
+        
+                        sum[0] = sum[0] + kernel[j+radius][k+radius]*temp_image.at<cv::Vec3b>(y - j, x - k)[0];
+                        sum[1] = sum[1] + kernel[j+radius][k+radius]*temp_image.at<cv::Vec3b>(y - j, x - k)[1];
+                        sum[2] = sum[2] + kernel[j+radius][k+radius]*temp_image.at<cv::Vec3b>(y - j, x - k)[2];
+                    }
+                }
+                cv::Vec3b temp_vec3b;
+                temp_vec3b.val[0] = sum[0];
+                temp_vec3b.val[1] = sum[1];
+                temp_vec3b.val[2] = sum[2];
+                result.push_back(std::make_pair(cv::Point(x,y), temp_vec3b));
+            }
+            normalize_pixel_lists(result,temp_region.get_min_max_coordinate().first);
+            return result;
+        }
+        
+        PixelList<BGRPixel>	find_smooth_perimeter(PerimeterData<BGRPixel> perimeter, int kernel_radius, double sigma){
+            
+            RegionData<BGRPixel> temp_region (*(perimeter.get_region_data()));
+
+            PixelList<BGRPixel> smoothed_region = region_smoothing(temp_region, kernel_radius, sigma);
+            unnormalize_pixel_lists(smoothed_region,temp_region.get_min_max_coordinate().first);
+            
+            cv::Mat temp_image = temp_region.get_original_image().clone();
+            
+            for (BGRPixel value : smoothed_region){
+                temp_image.at<cv::Vec3b>(value.first.y,value.first.x)[0] = value.second.val[0];
+                temp_image.at<cv::Vec3b>(value.first.y,value.first.x)[1] = value.second.val[1];
+                temp_image.at<cv::Vec3b>(value.first.y,value.first.x)[2] = value.second.val[2];
+            }
+
+            RegionData<BGRPixel> temp_region_2(temp_image, temp_region.get_user_target().x, 
+                                               temp_region.get_user_target().y, temp_region.get_type(), 
+                                               temp_region.get_threshold());
+
+            PerimeterData<BGRPixel> result(temp_region_2);
+            return result.get_normalized_pixel_list();
+        }
     
-    /*
-	double                      	gaussian(double x, double mu, double sigma);
-	std::vector<std::vector<double>>produce_2d_gaussian_kernel(int kernelRadius, double sigma);
-	cv::Mat                         neighborhood_mean(cv::Mat &src, std::vector<std::vector<double>> kernel); 
-	RegionData 						region_smoothing(cv::Mat &src,RegionData region,cv::Point min_coor, 
-													 int kernel_radius, double sigma);
-	cv::Mat                         create_image_from_pixel(cv::Mat &src, VectorOPixel pixel);
-	PerimeterData 					find_smooth_perimeter(cv::Mat &src, RegionData region, cv::Point min_coor,
-														  int kernel_radius, double sigma, int x, int y, 
-														  int type, int threshold);
-    */
+    public: 
+        SmoothData(cv::Mat input, int kernel_radius, double sigma){
+            min_max_coor_ = std::make_pair(cv::Point(0,0), cv::Point(input.cols-1, input.rows-1));
+            pixel_list_ = mat_smoothing(input, kernel_radius, sigma);
+        }
+        SmoothData(RegionData<BGRPixel> input, int kernel_radius, int sigma){
+            min_max_coor_ = input.get_min_max_coordinate();
+            pixel_list_ = region_smoothing(input, kernel_radius, sigma); 
+        }
+        
+        SmoothData(PerimeterData<BGRPixel> input, int kernel_radius, int sigma){
+            min_max_coor_ = input.get_min_max_coordinate();
+            pixel_list_ = find_smooth_perimeter(input, kernel_radius, sigma); 
+        }
+    };
+
     using namespace cv;      
     int main(){
         
@@ -342,9 +434,17 @@
         
         RegionData<BGRPixel> sample(input, 100,100,1,150);
         PerimeterData<BGRPixel> sample_two(sample);
+        SmoothData<BGRPixel> sample_three(input, 1, 5);
+
+        SmoothData<BGRPixel> sample_four(sample, 5, 10);
+        SmoothData<BGRPixel> sample_five(sample_two, 10, 10);
 
         sample_two.display("Perimeter"); 
         sample.display("Region");
+
+        sample_three.display("Smat");
+        sample_four.display("SRegion");
+        sample_five.display("SR");
 
         sample.save_image("out.png");
         sample_two.save_image("out2.png");
