@@ -7,8 +7,8 @@
 
         private:
 
-            RegionData<BGRPixel>    *region_data_;
-            PixelList<BGRPixel> find_perimeter (PixelList<BGRPixel> pixel_list, int type);
+            RegionData<BGRPixel> *region_data_;
+            PixelList<BGRPixel> find_perimeter (PixelList<BGRPixel> pixel_list, FindRegionType type);
         public:
             
             PerimeterData(const PerimeterData<BGRPixel> &input);

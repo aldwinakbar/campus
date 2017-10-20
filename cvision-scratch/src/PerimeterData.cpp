@@ -1,6 +1,6 @@
 #include "PerimeterData.h"
  
-        PixelList<BGRPixel> PerimeterData<BGRPixel>::find_perimeter (PixelList<BGRPixel> pixel_list, int type){ 
+        PixelList<BGRPixel> PerimeterData<BGRPixel>::find_perimeter (PixelList<BGRPixel> pixel_list, FindRegionType type){ 
             PixelList<BGRPixel> perimeter;      
             cv::Point size = region_data_->get_min_max_coordinate().second;
             cv::Mat temp(cv::Size(size.x, size.y), CV_8UC3, cv::Scalar(255,255,255)); 
@@ -18,32 +18,30 @@
             for (int i=0; i < x_size; i++){
                 for (int j=0; j < y_size; j++){
                     if(marker[i][j] == false ) continue;
-                    else if (marker[i][j] == true){
-                            if( type == 1){
-                            // for 8-point style
-                            
-                                if(j-1 < 0 || i-1 < 0 || i+1 >= x_size || j+1 >= y_size || 
-                                    !marker[i-1][j] || !marker[i+1][j] || !marker[i][j+1] ||
-                                    !marker[i][j-1] || !marker[i-1][j+1] || !marker[i+1][j+1] || 
-                                    !marker[i+1][j-1] || !marker[i-1][j-1]){
+                    else if( marker[i][j] && type == FindRegionType::Eight_CD){
+                    // for 8-point style
+                        if(j-1 < 0 || i-1 < 0 || i+1 >= x_size || j+1 >= y_size || 
+                            !marker[i-1][j] || !marker[i+1][j] || !marker[i][j+1] ||
+                            !marker[i][j-1] || !marker[i-1][j+1] || !marker[i+1][j+1] || 
+                            !marker[i+1][j-1] || !marker[i-1][j-1]){
                                         
-                                        perimeter.push_back(std::make_pair(cv::Point(i,j),temp.at<cv::Vec3b>(j,i)));
-                                }
-                            }
-                            // for 4-point style
-                            else{
-                                if(j-1 < 0 || i-1 < 0 || i+1 >= x_size || j+1 >= y_size || 
-                                    !marker[i-1][j] || !marker[i+1][j] || !marker[i][j+1] ||
-                                    !marker[i][j-1]){
+                            perimeter.push_back(std::make_pair(cv::Point(i,j),temp.at<cv::Vec3b>(j,i)));
+                        }
+                    }
+                    // for 4-point style
+                    else{
+                        if(j-1 < 0 || i-1 < 0 || i+1 >= x_size || j+1 >= y_size || 
+                            !marker[i-1][j] || !marker[i+1][j] || !marker[i][j+1] ||
+                            !marker[i][j-1]){
                                         
-                                        perimeter.push_back(std::make_pair(cv::Point(i,j),temp.at<cv::Vec3b>(j,i)));
-                                }
-                            }
+                            perimeter.push_back(std::make_pair(cv::Point(i,j),temp.at<cv::Vec3b>(j,i)));
+                        }
                     }
                 }
             }
             return perimeter;
         } 
+        
         PerimeterData<BGRPixel>::PerimeterData(const PerimeterData<BGRPixel> &input){
             region_data_ = new RegionData<BGRPixel>(*(input.region_data_));
             min_max_coor_  = input.region_data_->get_min_max_coordinate();

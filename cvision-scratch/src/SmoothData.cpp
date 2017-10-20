@@ -22,23 +22,58 @@
         return kernel2d;
     }
 
+    cv::Point SmoothData<BGRPixel>::coordinate_repair(cv::Point size, cv::Point input){
+
+        int N = size.x;
+        int M = size.y;    
+
+        int x_temp = input.x;
+        int y_temp = input.y;
+
+        if (x_temp < 0 && y_temp < 0){
+            x_temp = 0;
+            y_temp = 0;
+        }
+        else if(x_temp >= 0 && x_temp < N && y_temp < 0) y_temp = 0;
+        else if(x_temp >= N && y_temp < 0){
+            x_temp = N-1;
+            y_temp = 0;
+        }
+        else if(x_temp < 0 && y_temp >= 0 && y_temp < M) x_temp = 0;
+        else if(x_temp >= N && y_temp >= 0 && y_temp < M) x_temp = N-1;
+        else if(x_temp < 0 && y_temp >= M) {
+            x_temp = 0;
+            y_temp = M-1;
+        }
+        else if(x_temp >= 0 && x_temp < N && y_temp >= M) y_temp = M - 1;
+        else if(x_temp >= M && y_temp >= N){
+            x_temp = N-1;
+            y_temp = M-1;
+        }
+
+        return cv::Point(x_temp, y_temp);        
+    }
+
     PixelList<BGRPixel> SmoothData<BGRPixel>::mat_smoothing(cv::Mat &src, int kernel_radius, double sigma){
         SmoothingKernel kernel = produce_2d_gaussian_kernel(kernel_radius, sigma);
         PixelList<BGRPixel> dst; // certain pixel are not initialized
         int radius = (kernel.size() - 1)/2;
         int lower_limit = 0 - radius;
         int upper_limit = radius;
-        float sum[3];
-        for(int y = radius; y < src.rows - radius; y++){
-            for(int x = radius; x < src.cols - radius; x++){
+        float sum[3]; 
+
+        for(int y = 0; y < src.rows ; y++){
+            for(int x = 0; x < src.cols; x++){
                 sum[0] = 0.0;
                 sum[1] = 0.0;
                 sum[2] = 0.0;
-                for(int k = lower_limit; k <= upper_limit;k++){
-                    for(int j = lower_limit; j <= upper_limit; j++){
-                        sum[0] = sum[0] + kernel[j+radius][k+radius]*src.at<cv::Vec3b>(y - j, x - k)[0];
-                        sum[1] = sum[1] + kernel[j+radius][k+radius]*src.at<cv::Vec3b>(y - j, x - k)[1];
-                        sum[2] = sum[2] + kernel[j+radius][k+radius]*src.at<cv::Vec3b>(y - j, x - k)[2];
+                for(int k = lower_limit; k <= upper_limit; k++){
+                    for(int j = lower_limit; j <= upper_limit; j++){ 
+                        cv::Point temp_coor = coordinate_repair(cv::Point(src.cols,src.rows), cv::Point( (x + k), (y + j) ));
+                        
+                        sum[0] = sum[0] + kernel[j+radius][k+radius]*src.at<cv::Vec3b>(temp_coor.y, temp_coor.x)[0];
+                        sum[1] = sum[1] + kernel[j+radius][k+radius]*src.at<cv::Vec3b>(temp_coor.y, temp_coor.x)[1];
+                        sum[2] = sum[2] + kernel[j+radius][k+radius]*src.at<cv::Vec3b>(temp_coor.y, temp_coor.x)[2];
                     }
                 }
                 cv::Vec3b temp;
@@ -73,11 +108,11 @@
             sum[2] = 0.0;
             for(int k = lower_limit; k <= upper_limit;k++){
                 for(int j = lower_limit; j <= upper_limit; j++){
-                    if ((x-k) < 0 || (x-k) >= M || (y - j) < 0 || (y - j) >= N) continue; // inefficient way to be safe
-
-                    sum[0] = sum[0] + kernel[j+radius][k+radius]*temp_image.at<cv::Vec3b>(y - j, x - k)[0];
-                    sum[1] = sum[1] + kernel[j+radius][k+radius]*temp_image.at<cv::Vec3b>(y - j, x - k)[1];
-                    sum[2] = sum[2] + kernel[j+radius][k+radius]*temp_image.at<cv::Vec3b>(y - j, x - k)[2];
+                    cv::Point temp_coor = coordinate_repair(cv::Point(M,N), cv::Point( (x + k), (y + j) ));
+                    
+                    sum[0] = sum[0] + kernel[j+radius][k+radius]*temp_image.at<cv::Vec3b>(temp_coor.y, temp_coor.x)[0];
+                    sum[1] = sum[1] + kernel[j+radius][k+radius]*temp_image.at<cv::Vec3b>(temp_coor.y, temp_coor.x)[1];
+                    sum[2] = sum[2] + kernel[j+radius][k+radius]*temp_image.at<cv::Vec3b>(temp_coor.y, temp_coor.x)[2];
                 }
             }
             cv::Vec3b temp_vec3b;
@@ -113,8 +148,14 @@
         return result.get_normalized_pixel_list();
     }
  
+    SmoothData<BGRPixel>::SmoothData(const SmoothData<BGRPixel> &input){
+        
+        pixel_list_ = input.pixel_list_;
+        min_max_coor_ = input.min_max_coor_;
+    }
+
     SmoothData<BGRPixel>::SmoothData(cv::Mat input, int kernel_radius, double sigma){
-        min_max_coor_ = std::make_pair(cv::Point(0,0), cv::Point(input.cols-1, input.rows-1));
+        min_max_coor_ = std::make_pair(cv::Point(0,0), cv::Point(input.cols, input.rows));
         pixel_list_ = mat_smoothing(input, kernel_radius, sigma);
     }
     SmoothData<BGRPixel>::SmoothData(RegionData<BGRPixel> input, int kernel_radius, int sigma){

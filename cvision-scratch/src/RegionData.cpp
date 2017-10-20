@@ -16,7 +16,7 @@
 
         void RegionData<BGRPixel>::find_region_util(cv::Mat &image,std::vector<std::vector<bool>> &marker, 
                           PixelList<BGRPixel> &region, int x, int y, cv::Vec3b target, 
-                          int type, int threshold){
+                          FindRegionType type, int threshold){
         
             int M = image.cols;
             int N = image.rows;
@@ -31,7 +31,7 @@
             region.push_back(std::make_pair(cv::Point(x,y),image.at<cv::Vec3b>(y,x)));
             marker[x][y] = true;
             
-            if(type == 1){ 
+            if(type == FindRegionType::Eight_CD){ 
                 find_region_util(image,marker, region, x+1, y, target,type,threshold);
                 find_region_util(image,marker,region, x-1, y, target, type,threshold);
                 find_region_util(image,marker,region, x, y+1, target,type,threshold);
@@ -51,7 +51,7 @@
             }
         }
 
-        PixelList<BGRPixel>  RegionData<BGRPixel>::find_region(cv::Mat &image, int x, int y, int type, int threshold){
+        PixelList<BGRPixel>  RegionData<BGRPixel>::find_region(cv::Mat &image, int x, int y, FindRegionType type, int threshold){
 
             PixelList<BGRPixel> region;
             std::vector<std::vector<bool>> marker(image.cols,std::vector<bool>(image.rows, false));
@@ -69,17 +69,27 @@
             min_max_coor_ = input.min_max_coor_;
         }
         
-        RegionData<BGRPixel>::RegionData(cv::Mat &image, int x, int y, int type, int threshold){
+        RegionData<BGRPixel>::RegionData(cv::Mat &image, int x, int y, FindRegionType type, int threshold){
             original_ = image.clone();
             user_target_ = cv::Point(x,y);
             type_ = type;
             threshold_ = threshold;
-            pixel_list_ = find_region(image, x, y, type, threshold );
-            min_max_coor_ = minmax_coordinate(pixel_list_);
-            normalize_pixel_lists(pixel_list_, min_max_coor_.first);
+            
+            int width = image.cols;
+            int height = image.rows;
+
+            if (x >= width || x < 0 || y >= height || y < 0){
+                pixel_list_ = convert_to_pixel_list(image);
+                min_max_coor_ = std::make_pair(cv::Point(0,0),cv::Point(width - 1, height - 1));            
+            }
+            else {
+                pixel_list_ = find_region(image, x, y, type, threshold );
+                min_max_coor_ = minmax_coordinate(pixel_list_); 
+                normalize_pixel_lists(pixel_list_, min_max_coor_.first);
+            }
         }
 
-        int RegionData<BGRPixel>::get_type(){
+        FindRegionType RegionData<BGRPixel>::get_type(){
             return type_;
         }
 
