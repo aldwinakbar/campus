@@ -1,5 +1,16 @@
 #include "RegionData.h"
- 
+  
+        namespace std {
+            template <> struct hash<cv::Point> {
+                size_t operator()(const cv::Point & x) const {
+                    std::hash<std::string> str_hash; 
+                    std::string temp = std::to_string(x.x);
+                    temp += std::to_string(x.y);
+                    return str_hash(temp);
+                }
+            };
+        }
+
         double RegionData<BGRPixel>::colour_distance(cv::Vec3b e1,cv::Vec3b e2){
     
             long rmean = ( (long)e1.val[2] + (long)e2.val[2] ) / 2;
@@ -59,6 +70,55 @@
             find_region_util(image,marker,region, x, y, target, type, threshold);
             return region;
         }
+
+        void RegionData<BGRPixel>::unique_push(std::unordered_set<cv::Point> &pixel_checker, std::queue<cv::Point> &ff_operation, cv::Point data){
+            if (pixel_checker.insert(data).second) ff_operation.push(data); 
+        }
+        
+        PixelList<BGRPixel>  RegionData<BGRPixel>::nr_find_region(cv::Mat &image, int x, int y, FindRegionType type, int threshold){
+            
+            std::unordered_set<cv::Point> pixel_checker;
+            std::queue<cv::Point> ff_operation;
+            int M = image.cols;
+            int N = image.rows;
+
+            PixelList<BGRPixel> region;
+            std::vector<std::vector<bool>> marker(image.cols,std::vector<bool>(image.rows, false));
+            cv::Vec3b target = image.at<cv::Vec3b>(y,x);
+
+            ff_operation.push(cv::Point(x,y));
+
+            while (!ff_operation.empty()){
+                cv::Point temp = ff_operation.front();
+                ff_operation.pop(); 
+                                    
+                if (temp.x < 0 || temp.x >= M || temp.y < 0 || temp.y >= N) continue;
+                if (!compare_v3b(image.at<cv::Vec3b>(temp.y,temp.x), target, threshold)) continue;
+                if (compare_v3b(image.at<cv::Vec3b>(temp.y,temp.x), target, threshold) && marker[temp.x][temp.y]) continue;
+                    
+                region.push_back(std::make_pair(cv::Point(temp.x,temp.y),image.at<cv::Vec3b>(temp.y,temp.x)));
+                marker[temp.x][temp.y] = true;
+                
+                if ( type == FindRegionType::Four_CD){
+                    unique_push(pixel_checker, ff_operation, cv::Point(temp.x+1,temp.y));
+                    unique_push(pixel_checker, ff_operation, cv::Point(temp.x-1,temp.y));
+                    unique_push(pixel_checker, ff_operation, cv::Point(temp.x,temp.y+1));
+                    unique_push(pixel_checker, ff_operation, cv::Point(temp.x,temp.y-1)); 
+                }
+                else if( type == FindRegionType::Eight_CD){ 
+                    unique_push(pixel_checker, ff_operation, cv::Point(temp.x+1,temp.y));
+                    unique_push(pixel_checker, ff_operation, cv::Point(temp.x-1,temp.y));
+                    unique_push(pixel_checker, ff_operation, cv::Point(temp.x,temp.y+1));
+                    unique_push(pixel_checker, ff_operation, cv::Point(temp.x,temp.y-1)); 
+
+                    unique_push(pixel_checker, ff_operation, cv::Point(temp.x-1,temp.y+1));
+                    unique_push(pixel_checker, ff_operation, cv::Point(temp.x+1,temp.y+1));
+                    unique_push(pixel_checker, ff_operation, cv::Point(temp.x+1,temp.y-1));
+                    unique_push(pixel_checker, ff_operation, cv::Point(temp.x-1,temp.y-1)); 
+                }
+            }
+            return region;
+        }
  
         RegionData<BGRPixel>::RegionData(RegionData<BGRPixel> &input){
             original_ = input.original_.clone();
@@ -83,7 +143,7 @@
                 min_max_coor_ = std::make_pair(cv::Point(0,0),cv::Point(width - 1, height - 1));            
             }
             else {
-                pixel_list_ = find_region(image, x, y, type, threshold );
+                pixel_list_ = nr_find_region(image, x, y, type, threshold );
                 min_max_coor_ = minmax_coordinate(pixel_list_); 
                 normalize_pixel_lists(pixel_list_, min_max_coor_.first);
             }
