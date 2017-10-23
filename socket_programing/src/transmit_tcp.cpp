@@ -28,10 +28,10 @@ int main(int argc , char *argv[])
         printf("Could not create socket");
     }
     puts("Socket created");
-     
-    server.sin_addr.s_addr = inet_addr("127.0.0.1");
+     //http://52.0.198.215:8080/
+    server.sin_addr.s_addr = inet_addr("52.0.198.215");
     server.sin_family = AF_INET;
-    server.sin_port = htons( 8888 );
+    server.sin_port = htons(8888);
  
     //Connect to remote server
     if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0)
@@ -48,12 +48,14 @@ int main(int argc , char *argv[])
         printf("Enter message : ");
         scanf("%s" , message);
          
+         puts("sending data");
         //Send some data
         if( send(sock , message , strlen(message) , 0) < 0)
         {
             puts("Send failed");
             return 1;
         }
+        puts("receiving data");
          
         //Receive a reply from the server
         if( recv(sock , server_reply , 2000 , 0) < 0)
