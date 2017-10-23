@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <string>
 
 using namespace std;
 
@@ -10,5 +11,8 @@ int main(){
     for(bool logic : marker[0]){
         cout << "o" << endl;
     }
+
+    string test = std::to_string(-10);
+    cout << test;
     return 0;
 }
