@@ -45,7 +45,7 @@ void setLabel(cv::Mat& im, const std::string label, std::vector<cv::Point>& cont
 
 int main()
 {
-	VideoCapture cap(1); //capture the video from webcam
+	VideoCapture cap("Sore.avi"); //capture the video from webcam
 	
 	if (!cap.isOpened()){  // if not success, exit program
 		cout << "Cannot open the web cam" << endl;

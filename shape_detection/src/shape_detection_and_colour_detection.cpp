@@ -8,7 +8,7 @@ using namespace cv;
 using namespace std;
 
 RNG rng(12345);
-
+bool paused = false;
 /**
  * Helper function to find a cosine of angle between vectors
  * from pt0->pt1 and pt0->pt2
@@ -42,11 +42,11 @@ void setLabel(cv::Mat& im, const std::string label, std::vector<cv::Point>& cont
 
 int imageProcessing(Mat imgInput, int low_hue, int high_hue, int minimum_area, int *detected_center_x, int *detected_center_y, double *contour_area, double* detected_radius);
 
-	int iLowH 	= 92;	// yellow = 15, red = 166 , blue = 92
-	int iHighH 	= 114;	// yellow = 29, red = 179 , blue = 114
+	int iLowH 	= 76;	// yellow = 15, red = 166 , blue = 92
+	int iHighH 	= 136;	// yellow = 29, red = 179 , blue = 114
 	
-	int iLowS	= 90; // lower this to allow more noise, 80 is normal
-	int iHighS 	= 255;
+	int iLowS	= 70; // lower this to allow more noise, 80 is normal
+	int iHighS 	= 116;
 	
 	int iLowV 	= 0; // lower this to allow more noise
 	int iHighV 	= 255;
@@ -56,7 +56,7 @@ int imageProcessing(Mat imgInput, int low_hue, int high_hue, int minimum_area, i
 int main( int argc, char** argv ){
 	
 	//VideoCapture cap("test.avi"); //capture the video from webcam
-	VideoCapture cap(1); //capture the video from webcam
+	VideoCapture cap("Sore.avi"); //capture the video from webcam
 	
 	if (!cap.isOpened()){  // if not success, exit program
 		cout << "Cannot open the web cam" << endl;
@@ -76,16 +76,18 @@ int main( int argc, char** argv ){
 	
 	
 	namedWindow("Image", CV_WINDOW_NORMAL); //create a window called "Thresholded Image"
+	Mat imageRead;//	 = imread(argv[1], CV_LOAD_IMAGE_UNCHANGED);
 		
 	while (true){
 		
-		Mat imageRead;//	 = imread(argv[1], CV_LOAD_IMAGE_UNCHANGED);
-	
-		bool bSuccess = cap.read(imageRead); // read a new frame from video
-		if (!bSuccess){ //if not success, break loop
-			
-			cout << "Cannot read a frame from video stream" << endl;
-			break;
+		
+		if (!paused) {
+			bool bSuccess = cap.read(imageRead); // read a new frame from video
+			if (!bSuccess){ //if not success, break loop
+				
+				cout << "Cannot read a frame from video stream" << endl;
+				break;
+			}
 		}
 		
 		int center_buoy_x	= 0;
@@ -111,12 +113,14 @@ int main( int argc, char** argv ){
 		
 		imshow("Image", imageRead );
 		
-		if (waitKey(30) == 27){ //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
-			
-			cout << "esc key is pressed by user" << endl;
-			break;
-		}
-		
+		 char c = (char)waitKey(30); //wait for key press for 30ms
+
+        if (c == 27) // ascii of esc
+        {
+            cout << "esc key is pressed by user" << endl;
+            break;
+        }
+        else if (c == 'p') paused = !paused;		
 	}
 	
 	return 0;
