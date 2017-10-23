@@ -4,6 +4,10 @@ EXIT_STATUS=no
 CC_EXIST=yes
 CPP_EXIST=yes
 
+LIBRARIES="-lcoap-1"
+INCLUDE="-I /usr/local/include/coap/"
+CXXFLAGS="-O2 -D_GNU_SOURCE -DWITH_POSIX"
+
 if [ ! -d "src" ]; then
   echo "src directory doesn't exist."
   EXIT_STATUS=yes
@@ -54,7 +58,8 @@ if [ "$EXIT_STATUS" = "no" ] ; then
 
 		for i in *.c; do
 			echo "compiling $i"
-			gcc -ggdb `pkg-config --cflags opencv` -o `basename $i .c` $i `pkg-config --libs opencv`;
+			gcc -ggdb `pkg-config --cflags opencv` -o `basename $i .c` $i `pkg-config --libs opencv `;
+			#gcc $i $INCLUDE $LIBRARIES $CXXFLAGS -o `basename $i .c`;
 			
 			if [ -f `basename $i .c` ]; then
 				mv `basename $i .c` ../build/
@@ -70,7 +75,7 @@ if [ "$EXIT_STATUS" = "no" ] ; then
 
 		for i in *.cpp; do
 			echo "compiling $i"
-			g++ -ggdb `pkg-config --cflags opencv` -o `basename $i .cpp` $i `pkg-config --libs opencv`;
+			g++ -ggdb `pkg-config --cflags opencv` -o `basename $i .cpp` $i `pkg-config --libs opencv` -lpthread;
 			
 			if [ -f `basename $i .cpp` ]; then
 				mv `basename $i .cpp` ../build/
