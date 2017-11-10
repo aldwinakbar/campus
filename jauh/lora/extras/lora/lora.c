@@ -1,78 +1,13 @@
-#include "espressif/esp_common.h"
-#include "esp/uart.h"
-#include "FreeRTOS.h"
-#include "task.h"
-#include "esp8266.h"
-#include <stdio.h>
-#include "esp8266.h"
-#include "esp/spi.h"
-#include <string.h>
-
-#define SPI_WRITE_MASK 0x80
-#define SPI_READ_MASK 0x7f
-
-#define RESET_PIN				 16
-#define IRQ_PIN					 5
-
-// registers
-#define REG_FIFO                 0x00
-#define REG_OP_MODE              0x01
-#define REG_FRF_MSB              0x06
-#define REG_FRF_MID              0x07
-#define REG_FRF_LSB              0x08
-#define REG_PA_CONFIG            0x09
-#define REG_LNA                  0x0c
-#define REG_FIFO_ADDR_PTR        0x0d
-#define REG_FIFO_TX_BASE_ADDR    0x0e
-#define REG_FIFO_RX_BASE_ADDR    0x0f
-#define REG_FIFO_RX_CURRENT_ADDR 0x10
-#define REG_IRQ_FLAGS            0x12
-#define REG_RX_NB_BYTES          0x13
-#define REG_PKT_RSSI_VALUE       0x1a
-#define REG_PKT_SNR_VALUE        0x1b
-#define REG_MODEM_CONFIG_1       0x1d
-#define REG_MODEM_CONFIG_2       0x1e
-#define REG_PREAMBLE_MSB         0x20
-#define REG_PREAMBLE_LSB         0x21
-#define REG_PAYLOAD_LENGTH       0x22
-#define REG_MODEM_CONFIG_3       0x26
-#define REG_RSSI_WIDEBAND        0x2c
-#define REG_DETECTION_OPTIMIZE   0x31
-#define REG_DETECTION_THRESHOLD  0x37
-#define REG_SYNC_WORD            0x39
-#define REG_DIO_MAPPING_1        0x40
-#define REG_VERSION              0x42
-
-// modes
-#define MODE_LONG_RANGE_MODE     0x80
-#define MODE_SLEEP               0x00
-#define MODE_STDBY               0x01
-#define MODE_TX                  0x03
-#define MODE_RX_CONTINUOUS       0x05
-#define MODE_RX_SINGLE           0x06
-
-// PA config
-#define PA_BOOST                 0x80
-#define PA_OUTPUT_RFO_PIN      0
-#define PA_OUTPUT_PA_BOOST_PIN 1
-
-// IRQ masks
-#define IRQ_TX_DONE_MASK           0x08
-#define IRQ_PAYLOAD_CRC_ERROR_MASK 0x20
-#define IRQ_RX_DONE_MASK           0x40
-
-#define MAX_PKT_LENGTH           255
-
+#include "lora.h"
 
 int _lora_frequency = 0; 
 int _lora_packet_index = 0;
 int _lora_implicit_header_mode = 0;
 void (*_lora_on_receive)(int) = NULL;
 
-inline void delay(int ms){
+void delay(int ms){
 	vTaskDelay(ms/portTICK_PERIOD_MS);
 }
-
 uint8_t single_transfer(uint8_t address, uint8_t value){
 	spi_set_address(1,8,address);
 	uint8_t data = spi_transfer_8(1, value);
@@ -103,8 +38,7 @@ void lora_set_frequency(long frequency){
   write_register(REG_FRF_LSB, (uint8_t)(frf >> 0));
 }
 
-void lora_set_tx_power(int level, int outputPin)
-{
+void lora_set_tx_power(int level, int outputPin){
   if (PA_OUTPUT_RFO_PIN == outputPin) {
     // RFO
     if (level < 0) {
@@ -130,21 +64,18 @@ void lora_set_tx_power_pa_boost(int level){
 	lora_set_tx_power(level, PA_OUTPUT_PA_BOOST_PIN);
 }
 
-void lora_idle()
-{
+void lora_idle(){
   write_register(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_STDBY);
 }
 
-void lora_explicit_header_mode()
-{
+void lora_explicit_header_mode(){
   _lora_implicit_header_mode = 0;
   
   uint8_t mdm_cfg = read_register(REG_MODEM_CONFIG_1);
   write_register(REG_MODEM_CONFIG_1, mdm_cfg & 0xfe);
 }
 
-void lora_implicit_header_mode()
-{
+void lora_implicit_header_mode(){
   _lora_implicit_header_mode = 1;
   uint8_t mdm_cfg = read_register(REG_MODEM_CONFIG_1);
   write_register(REG_MODEM_CONFIG_1, mdm_cfg | 0x01);
@@ -195,13 +126,11 @@ int lora_parse_packet(int size){
   return packetLength;
 }
 
-int lora_available()
-{
+int lora_available(){
   return (read_register(REG_RX_NB_BYTES) - _lora_packet_index);
 }
 
-int lora_read()
-{
+int lora_read(){
   if (!lora_available()) {
     return -1;
   }
@@ -211,18 +140,15 @@ int lora_read()
   return read_register(REG_FIFO);
 }
 
-int lora_packet_rssi()
-{
+int lora_packet_rssi(){
   return (read_register(REG_PKT_RSSI_VALUE) - (_lora_frequency < 868E6 ? 164 : 157));
 }
 
-float lora_packet_snr()
-{
+float lora_packet_snr(){
   return ((int8_t)read_register(REG_PKT_SNR_VALUE)) * 0.25;
 }
 
-void lora_set_spreading_factor(int sf)
-{
+void lora_set_spreading_factor(int sf){
   if (sf < 6) {
     sf = 6;
   } else if (sf > 12) {
@@ -240,8 +166,7 @@ void lora_set_spreading_factor(int sf)
   write_register(REG_MODEM_CONFIG_2, (read_register(REG_MODEM_CONFIG_2) & 0x0f) | ((sf << 4) & 0xf0));
 }
 
-void lora_set_signal_bandwidth(long sbw)
-{
+void lora_set_signal_bandwidth(long sbw){
   int bw;
 
   if (sbw <= 7.8E3) {
@@ -269,8 +194,7 @@ void lora_set_signal_bandwidth(long sbw)
   write_register(REG_MODEM_CONFIG_1, (read_register(REG_MODEM_CONFIG_1) & 0x0f) | (bw << 4));
 }
 
-void lora_set_coding_rate_4(int denominator)
-{
+void lora_set_coding_rate_4(int denominator){
   if (denominator < 5) {
     denominator = 5;
   } else if (denominator > 8) {
@@ -282,36 +206,30 @@ void lora_set_coding_rate_4(int denominator)
   write_register(REG_MODEM_CONFIG_1, (read_register(REG_MODEM_CONFIG_1) & 0xf1) | (cr << 1));
 }
 
-void lora_set_preamble_length(long length)
-{
+void lora_set_preamble_length(long length){
   write_register(REG_PREAMBLE_MSB, (uint8_t)(length >> 8));
   write_register(REG_PREAMBLE_LSB, (uint8_t)(length >> 0));
 }
 
-void lora_set_sync_word(int sw)
-{
+void lora_set_sync_word(int sw){
   write_register(REG_SYNC_WORD, sw);
 }
 
-void lora_enable_crc()
-{
+void lora_enable_crc(){
 	uint8_t mdm_cfg = read_register(REG_MODEM_CONFIG_2);
   write_register(REG_MODEM_CONFIG_2, mdm_cfg | 0x04);
 }
 
-void lora_disable_crc()
-{
+void lora_disable_crc(){
 	uint8_t mdm_cfg = read_register(REG_MODEM_CONFIG_2);
   write_register(REG_MODEM_CONFIG_2, mdm_cfg & 0xfb);
 }
 
-uint8_t lora_random()
-{
+uint8_t lora_random(){
   return read_register(REG_RSSI_WIDEBAND);
 }
 
-int lora_begin_packet(int implicitHeader)
-{
+int lora_begin_packet(int implicitHeader){
   // put in standby mode
   lora_idle();
 
@@ -328,13 +246,11 @@ int lora_begin_packet(int implicitHeader)
   return 1;
 }
 
-int lora_begin_packet_default()
-{
+int lora_begin_packet_default(){
   return lora_begin_packet(0);
 }
 
-int lora_end_packet()
-{
+int lora_end_packet(){
   // put in TX mode
   write_register(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_TX);
 
@@ -347,8 +263,7 @@ int lora_end_packet()
   return 1;
 }
 
-size_t lora_write(const uint8_t *buffer, size_t size)
-{
+size_t lora_write(const uint8_t *buffer, size_t size){
   int currentLength = read_register(REG_PAYLOAD_LENGTH);
 
   // check size
@@ -367,8 +282,7 @@ size_t lora_write(const uint8_t *buffer, size_t size)
   return size;
 }
 
-size_t lora_write_default(uint8_t byte)
-{
+size_t lora_write_default(uint8_t byte){
   return lora_write(&byte, sizeof(byte));
 }
 
@@ -381,8 +295,7 @@ size_t lora_write_string(char * input){
 	return string_size;
 }
 
-void lora_handle_dio0_rise()
-{
+void lora_handle_dio0_rise(){
   int irqFlags = read_register(REG_IRQ_FLAGS);
 
   // clear IRQ's
@@ -407,8 +320,7 @@ void lora_handle_dio0_rise()
   }
 }
 
-void lora_receive(int size)
-{
+void lora_receive(int size){
   if (size > 0) {
     lora_implicit_header_mode();
 
@@ -420,13 +332,11 @@ void lora_receive(int size)
   write_register(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_RX_CONTINUOUS);
 }
 
-void lora_on_dio0_rise(uint8_t gpio_num)
-{
+void lora_on_dio0_rise(uint8_t gpio_num){
   lora_handle_dio0_rise();
 }
 
-void lora_on_receive(void(*callback)(int))
-{
+void lora_on_receive(void(*callback)(int)){
 	
   _lora_on_receive = callback;
 
@@ -444,6 +354,7 @@ void lora_on_receive(void(*callback)(int))
 }
 
 int lora_begin(long frequency){
+	
 	gpio_enable(RESET_PIN, GPIO_OUTPUT);
     
     gpio_write(RESET_PIN, 0);
@@ -480,14 +391,12 @@ int lora_begin(long frequency){
 	
 }
 
-void lora_end()
-{
+void lora_end(){
   // put in sleep mode
   lora_sleep();
 }
 
-int lora_peek()
-{
+int lora_peek(){
   if (!lora_available()) {
     return -1;
   }
@@ -502,92 +411,4 @@ int lora_peek()
   write_register(REG_FIFO_ADDR_PTR, currentAddress);
 
   return b;
-}
-
-
-uint32_t counter = 0;
-void loop(void *pvParameters)
-{
-	while(1) {
-		delay(1000);
-		/*
-	 // try to parse packet
-		int packetSize = lora_parse_packet(0);
-		if (packetSize) {
-			// received a packet
-			printf("Received packet '");
-
-				// read packet
-			while (lora_available()) {
-				printf("%c",(char)lora_read());
-			}
-
-				// print RSSI of packet
-			printf("' with RSSI ");
-			printf("%d\n",lora_packet_rssi());
-		}
-		*/
-	  /*
-	  char counter_string[32];	  
-	  sprintf(counter_string, "%d", counter++);
-	  
-	  lora_begin_packet_default();
-	  lora_write_string("| 1 : ");
-	  lora_write_string(counter_string);
-	  
-	  lora_write_string(" | 2 : ");
-	  lora_write_string(counter_string);
-	  
-	  lora_write_string(" | 3 : ");
-	  lora_write_string(counter_string);
-	  
-	  lora_write_string(" | 4 : ");
-	  lora_write_string(counter_string);
-	  
-	  lora_write_string(" | 5 : ");
-	  lora_write_string(counter_string);
-	  lora_end_packet();
-	  //delay(1000);
-	  */
-	  
-    }
-}
-
-void onReceive(int packetSize) {
- 
-			// received a packet
-	printf("Received packet '");
-
-
-	for (int i = 0; i < packetSize; i++) {
-		printf("%c",(char)lora_read());
-	}
-				// print RSSI of packet
-	printf("' with RSSI ");
-	printf("%d\n",lora_packet_rssi());
-}
-
-void user_init(void)
-{
-    uart_set_baud(0, 115200);
-    
-    if (!lora_begin(915E6)) {
-		printf("Starting LoRa failed!");
-		while (1);
-	}
-	
-	lora_set_coding_rate_4(8);
-	lora_set_spreading_factor(11);
-	lora_set_signal_bandwidth(41.7E3);
-	lora_set_tx_power_pa_boost(17);
-	//lora_enable_crc();
-	
-	  // register the receive callback
-	lora_on_receive(onReceive);
-
-  // put the radio into receive mode
-	lora_receive(0);
-   
-    printf("SDK version:%s\n", sdk_system_get_sdk_version());
-    xTaskCreate(loop, "loop", 1024, NULL, 2, NULL);
 }
