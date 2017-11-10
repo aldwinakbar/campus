@@ -1,138 +1,593 @@
-/* Example SPI transfert
- *
- * This sample code is in the public domain.
- */
 #include "espressif/esp_common.h"
 #include "esp/uart.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "esp8266.h"
 #include <stdio.h>
+#include "esp8266.h"
 #include "esp/spi.h"
 #include <string.h>
 
+#define SPI_WRITE_MASK 0x80
+#define SPI_READ_MASK 0x7f
+
+#define RESET_PIN				 16
+#define IRQ_PIN					 5
+
+// registers
+#define REG_FIFO                 0x00
+#define REG_OP_MODE              0x01
+#define REG_FRF_MSB              0x06
+#define REG_FRF_MID              0x07
+#define REG_FRF_LSB              0x08
+#define REG_PA_CONFIG            0x09
+#define REG_LNA                  0x0c
+#define REG_FIFO_ADDR_PTR        0x0d
+#define REG_FIFO_TX_BASE_ADDR    0x0e
+#define REG_FIFO_RX_BASE_ADDR    0x0f
+#define REG_FIFO_RX_CURRENT_ADDR 0x10
+#define REG_IRQ_FLAGS            0x12
+#define REG_RX_NB_BYTES          0x13
+#define REG_PKT_RSSI_VALUE       0x1a
+#define REG_PKT_SNR_VALUE        0x1b
+#define REG_MODEM_CONFIG_1       0x1d
+#define REG_MODEM_CONFIG_2       0x1e
+#define REG_PREAMBLE_MSB         0x20
+#define REG_PREAMBLE_LSB         0x21
+#define REG_PAYLOAD_LENGTH       0x22
+#define REG_MODEM_CONFIG_3       0x26
+#define REG_RSSI_WIDEBAND        0x2c
+#define REG_DETECTION_OPTIMIZE   0x31
+#define REG_DETECTION_THRESHOLD  0x37
+#define REG_SYNC_WORD            0x39
+#define REG_DIO_MAPPING_1        0x40
 #define REG_VERSION              0x42
 
-/*
- * Possible Data Structure of SPI Transaction
- *
- * [COMMAND]+[ADDRESS]+[DataOUT]+[DUMMYBITS]+[DataIN]
- *
- * [COMMAND]+[ADDRESS]+[DUMMYBITS]+[DataOUT]
- *
- */
+// modes
+#define MODE_LONG_RANGE_MODE     0x80
+#define MODE_SLEEP               0x00
+#define MODE_STDBY               0x01
+#define MODE_TX                  0x03
+#define MODE_RX_CONTINUOUS       0x05
+#define MODE_RX_SINGLE           0x06
+
+// PA config
+#define PA_BOOST                 0x80
+#define PA_OUTPUT_RFO_PIN      0
+#define PA_OUTPUT_PA_BOOST_PIN 1
+
+// IRQ masks
+#define IRQ_TX_DONE_MASK           0x08
+#define IRQ_PAYLOAD_CRC_ERROR_MASK 0x20
+#define IRQ_RX_DONE_MASK           0x40
+
+#define MAX_PKT_LENGTH           255
 
 
+int _lora_frequency = 0; 
+int _lora_packet_index = 0;
+int _lora_implicit_header_mode = 0;
+void (*_lora_on_receive)(int) = NULL;
+
+inline void delay(int ms){
+	vTaskDelay(ms/portTICK_PERIOD_MS);
+}
+
+uint8_t single_transfer(uint8_t address, uint8_t value){
+	spi_set_address(1,8,address);
+	uint8_t data = spi_transfer_8(1, value);
+	spi_clear_address(1);
+	return data;
+}
+
+uint8_t read_register(uint8_t address){
+	return single_transfer(address & SPI_READ_MASK,0x00);
+}
+
+void write_register(uint8_t address, uint8_t value){
+	single_transfer(address  | SPI_WRITE_MASK, value);
+}
+
+void lora_sleep(){
+	write_register(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_SLEEP);
+}
+
+void lora_set_frequency(long frequency){
+	
+  _lora_frequency = frequency;
+
+  uint64_t frf = ((uint64_t)frequency << 19) / 32000000;
+
+  write_register(REG_FRF_MSB, (uint8_t)(frf >> 16));
+  write_register(REG_FRF_MID, (uint8_t)(frf >> 8));
+  write_register(REG_FRF_LSB, (uint8_t)(frf >> 0));
+}
+
+void lora_set_tx_power(int level, int outputPin)
+{
+  if (PA_OUTPUT_RFO_PIN == outputPin) {
+    // RFO
+    if (level < 0) {
+      level = 0;
+    } else if (level > 14) {
+      level = 14;
+    }
+
+    write_register(REG_PA_CONFIG, 0x70 | level);
+  } else {
+    // PA BOOST
+    if (level < 2) {
+      level = 2;
+    } else if (level > 17) {
+      level = 17;
+    }
+
+    write_register(REG_PA_CONFIG, PA_BOOST | (level - 2));
+  }
+}
+
+void lora_set_tx_power_pa_boost(int level){
+	lora_set_tx_power(level, PA_OUTPUT_PA_BOOST_PIN);
+}
+
+void lora_idle()
+{
+  write_register(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_STDBY);
+}
+
+void lora_explicit_header_mode()
+{
+  _lora_implicit_header_mode = 0;
+  
+  uint8_t mdm_cfg = read_register(REG_MODEM_CONFIG_1);
+  write_register(REG_MODEM_CONFIG_1, mdm_cfg & 0xfe);
+}
+
+void lora_implicit_header_mode()
+{
+  _lora_implicit_header_mode = 1;
+  uint8_t mdm_cfg = read_register(REG_MODEM_CONFIG_1);
+  write_register(REG_MODEM_CONFIG_1, mdm_cfg | 0x01);
+}
+
+int lora_parse_packet(int size){
+  int packetLength = 0;
+  int irqFlags = read_register(REG_IRQ_FLAGS);
+
+  if (size > 0) {
+    lora_implicit_header_mode();
+
+    write_register(REG_PAYLOAD_LENGTH, size & 0xff);
+  } else {
+    lora_explicit_header_mode();
+  }
+
+  // clear IRQ's
+  write_register(REG_IRQ_FLAGS, irqFlags);
+
+  if ((irqFlags & IRQ_RX_DONE_MASK) && (irqFlags & IRQ_PAYLOAD_CRC_ERROR_MASK) == 0) {
+    // received a packet
+    _lora_packet_index = 0;
+
+    // read packet length
+    if (_lora_implicit_header_mode) {
+      packetLength = read_register(REG_PAYLOAD_LENGTH);
+    } else {
+      packetLength = read_register(REG_RX_NB_BYTES);
+    }
+
+    // set FIFO address to current RX address
+    uint8_t fifo_current_addr = read_register(REG_FIFO_RX_CURRENT_ADDR);
+    write_register(REG_FIFO_ADDR_PTR, fifo_current_addr);
+
+    // put in standby mode
+    lora_idle();
+  } else if (read_register(REG_OP_MODE) != (MODE_LONG_RANGE_MODE | MODE_RX_SINGLE)) {
+    // not currently in RX mode
+
+    // reset FIFO address
+    write_register(REG_FIFO_ADDR_PTR, 0);
+
+    // put in single RX mode
+    write_register(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_RX_SINGLE);
+  }
+
+  return packetLength;
+}
+
+int lora_available()
+{
+  return (read_register(REG_RX_NB_BYTES) - _lora_packet_index);
+}
+
+int lora_read()
+{
+  if (!lora_available()) {
+    return -1;
+  }
+
+  _lora_packet_index++;
+
+  return read_register(REG_FIFO);
+}
+
+int lora_packet_rssi()
+{
+  return (read_register(REG_PKT_RSSI_VALUE) - (_lora_frequency < 868E6 ? 164 : 157));
+}
+
+float lora_packet_snr()
+{
+  return ((int8_t)read_register(REG_PKT_SNR_VALUE)) * 0.25;
+}
+
+void lora_set_spreading_factor(int sf)
+{
+  if (sf < 6) {
+    sf = 6;
+  } else if (sf > 12) {
+    sf = 12;
+  }
+
+  if (sf == 6) {
+    write_register(REG_DETECTION_OPTIMIZE, 0xc5);
+    write_register(REG_DETECTION_THRESHOLD, 0x0c);
+  } else {
+    write_register(REG_DETECTION_OPTIMIZE, 0xc3);
+    write_register(REG_DETECTION_THRESHOLD, 0x0a);
+  }
+
+  write_register(REG_MODEM_CONFIG_2, (read_register(REG_MODEM_CONFIG_2) & 0x0f) | ((sf << 4) & 0xf0));
+}
+
+void lora_set_signal_bandwidth(long sbw)
+{
+  int bw;
+
+  if (sbw <= 7.8E3) {
+    bw = 0;
+  } else if (sbw <= 10.4E3) {
+    bw = 1;
+  } else if (sbw <= 15.6E3) {
+    bw = 2;
+  } else if (sbw <= 20.8E3) {
+    bw = 3;
+  } else if (sbw <= 31.25E3) {
+    bw = 4;
+  } else if (sbw <= 41.7E3) {
+    bw = 5;
+  } else if (sbw <= 62.5E3) {
+    bw = 6;
+  } else if (sbw <= 125E3) {
+    bw = 7;
+  } else if (sbw <= 250E3) {
+    bw = 8;
+  } else /*if (sbw <= 250E3)*/ {
+    bw = 9;
+  }
+
+  write_register(REG_MODEM_CONFIG_1, (read_register(REG_MODEM_CONFIG_1) & 0x0f) | (bw << 4));
+}
+
+void lora_set_coding_rate_4(int denominator)
+{
+  if (denominator < 5) {
+    denominator = 5;
+  } else if (denominator > 8) {
+    denominator = 8;
+  }
+
+  int cr = denominator - 4;
+
+  write_register(REG_MODEM_CONFIG_1, (read_register(REG_MODEM_CONFIG_1) & 0xf1) | (cr << 1));
+}
+
+void lora_set_preamble_length(long length)
+{
+  write_register(REG_PREAMBLE_MSB, (uint8_t)(length >> 8));
+  write_register(REG_PREAMBLE_LSB, (uint8_t)(length >> 0));
+}
+
+void lora_set_sync_word(int sw)
+{
+  write_register(REG_SYNC_WORD, sw);
+}
+
+void lora_enable_crc()
+{
+	uint8_t mdm_cfg = read_register(REG_MODEM_CONFIG_2);
+  write_register(REG_MODEM_CONFIG_2, mdm_cfg | 0x04);
+}
+
+void lora_disable_crc()
+{
+	uint8_t mdm_cfg = read_register(REG_MODEM_CONFIG_2);
+  write_register(REG_MODEM_CONFIG_2, mdm_cfg & 0xfb);
+}
+
+uint8_t lora_random()
+{
+  return read_register(REG_RSSI_WIDEBAND);
+}
+
+int lora_begin_packet(int implicitHeader)
+{
+  // put in standby mode
+  lora_idle();
+
+  if (implicitHeader) {
+    lora_implicit_header_mode();
+  } else {
+    lora_explicit_header_mode();
+  }
+
+  // reset FIFO address and paload length
+  write_register(REG_FIFO_ADDR_PTR, 0);
+  write_register(REG_PAYLOAD_LENGTH, 0);
+
+  return 1;
+}
+
+int lora_begin_packet_default()
+{
+  return lora_begin_packet(0);
+}
+
+int lora_end_packet()
+{
+  // put in TX mode
+  write_register(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_TX);
+
+  // wait for TX done
+  while((read_register(REG_IRQ_FLAGS) & IRQ_TX_DONE_MASK) == 0);
+
+  // clear IRQ's
+  write_register(REG_IRQ_FLAGS, IRQ_TX_DONE_MASK);
+
+  return 1;
+}
+
+size_t lora_write(const uint8_t *buffer, size_t size)
+{
+  int currentLength = read_register(REG_PAYLOAD_LENGTH);
+
+  // check size
+  if ((currentLength + size) > MAX_PKT_LENGTH) {
+    size = MAX_PKT_LENGTH - currentLength;
+  }
+
+  // write data
+  for (size_t i = 0; i < size; i++) {
+    write_register(REG_FIFO, buffer[i]);
+  }
+
+  // update length
+  write_register(REG_PAYLOAD_LENGTH, currentLength + size);
+
+  return size;
+}
+
+size_t lora_write_default(uint8_t byte)
+{
+  return lora_write(&byte, sizeof(byte));
+}
+
+size_t lora_write_string(char * input){
+	
+	size_t string_size = strlen(input);
+	for(int i = 0 ; i < string_size; i++)
+	lora_write_default((unsigned char)input[i]);
+	
+	return string_size;
+}
+
+void lora_handle_dio0_rise()
+{
+  int irqFlags = read_register(REG_IRQ_FLAGS);
+
+  // clear IRQ's
+  write_register(REG_IRQ_FLAGS, irqFlags);
+
+  if ((irqFlags & IRQ_PAYLOAD_CRC_ERROR_MASK) == 0) {
+    // received a packet
+    _lora_packet_index = 0;
+
+    // read packet length
+    int packetLength = _lora_implicit_header_mode ? read_register(REG_PAYLOAD_LENGTH) : read_register(REG_RX_NB_BYTES);
+
+    // set FIFO address to current RX address
+    write_register(REG_FIFO_ADDR_PTR, read_register(REG_FIFO_RX_CURRENT_ADDR));
+
+    if (_lora_on_receive) {
+      _lora_on_receive(packetLength);
+    }
+
+    // reset FIFO address
+    write_register(REG_FIFO_ADDR_PTR, 0);
+  }
+}
+
+void lora_receive(int size)
+{
+  if (size > 0) {
+    lora_implicit_header_mode();
+
+    write_register(REG_PAYLOAD_LENGTH, size & 0xff);
+  } else {
+    lora_explicit_header_mode();
+  }
+
+  write_register(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_RX_CONTINUOUS);
+}
+
+void lora_on_dio0_rise(uint8_t gpio_num)
+{
+  lora_handle_dio0_rise();
+}
+
+void lora_on_receive(void(*callback)(int))
+{
+	
+  _lora_on_receive = callback;
+
+  if (callback) {
+    write_register(REG_DIO_MAPPING_1, 0x00);
+    
+	gpio_enable(IRQ_PIN, GPIO_INPUT);
+	gpio_set_interrupt(IRQ_PIN, GPIO_INTTYPE_EDGE_POS, lora_on_dio0_rise);
+	printf("Interrupt Init Success!");
+    //attachInterrupt(digitalPinToInterrupt(_dio0), LoRaClass::onDio0Rise, RISING);
+  } else {
+	  printf("callback empty");
+    //detachInterrupt(digitalPinToInterrupt(_dio0));
+  }
+}
+
+int lora_begin(long frequency){
+	gpio_enable(RESET_PIN, GPIO_OUTPUT);
+    
+    gpio_write(RESET_PIN, 0);
+    delay(10);
+    gpio_write(RESET_PIN, 1);
+    delay(10);
+	
+	spi_init(1, SPI_MODE0, SPI_FREQ_DIV_8M, 1, SPI_LITTLE_ENDIAN, false); // init SPI module
+	
+	uint8_t version = read_register(REG_VERSION);
+	if (version != 0x12) {
+		return 0;
+	}
+		
+	lora_sleep();
+	lora_set_frequency(frequency);
+	
+	// set base addresses
+	write_register(REG_FIFO_TX_BASE_ADDR, 0);
+	write_register(REG_FIFO_RX_BASE_ADDR, 0);
+
+	  // set LNA boost
+	uint8_t lna_status = read_register(REG_LNA);
+	write_register(REG_LNA, lna_status | 0x03);
+
+	  // set auto AGC
+	write_register(REG_MODEM_CONFIG_3, 0x04);
+	
+	lora_set_tx_power_pa_boost(17);
+	
+	lora_idle();
+	
+	return 1;
+	
+}
+
+void lora_end()
+{
+  // put in sleep mode
+  lora_sleep();
+}
+
+int lora_peek()
+{
+  if (!lora_available()) {
+    return -1;
+  }
+
+  // store current FIFO address
+  int currentAddress = read_register(REG_FIFO_ADDR_PTR);
+
+  // read
+  uint8_t b = read_register(REG_FIFO);
+
+  // restore FIFO address
+  write_register(REG_FIFO_ADDR_PTR, currentAddress);
+
+  return b;
+}
+
+
+uint32_t counter = 0;
 void loop(void *pvParameters)
 {
-    uint32_t time = 0 ; // SPI transmission time
-    float avr_time = 0 ; // Average of SPI transmission
-    float u = 0 ;
+	while(1) {
+		delay(1000);
+		/*
+	 // try to parse packet
+		int packetSize = lora_parse_packet(0);
+		if (packetSize) {
+			// received a packet
+			printf("Received packet '");
 
-    spi_init(1, SPI_MODE0, SPI_FREQ_DIV_8M, 1, SPI_LITTLE_ENDIAN, false); // init SPI module
+				// read packet
+			while (lora_available()) {
+				printf("%c",(char)lora_read());
+			}
 
-	vTaskDelay(1000 / portTICK_PERIOD_MS);
-    while(1) {
-
-        time = sdk_system_get_time();
-        
-        /*
-         * Setting Command and Address value can be done using 2 example, like below :
-         * 
-         * 	
-         *  1) The "udon'tsay" way:
-         * 			spi_set_command(1,8,0x02);
-         * 			spi_set_address(1,8,0x00);
-         * 
-         *  2) The other way :
-         * 			spi_transfer_8(1, 0x02);
-         * 			spi_transfer_8(1, 0x00);
+				// print RSSI of packet
+			printf("' with RSSI ");
+			printf("%d\n",lora_packet_rssi());
+		}
 		*/
-		
-		spi_transfer_8(1, 0x02);
-        spi_transfer_8(1, 0x00);
-        unsigned char name[] = "Aldwin Akbar Hermanudin";
-        
-	    uint16_t in_buf[sizeof(name)];
-		spi_transfer(1, name, in_buf, strlen((char*)name), SPI_8BIT); // len = 4 words * 2 bytes = 8 bytes
-        spi_clear_address(1); // remove address
-        spi_clear_command(1); // remove command        
-		/*  if (version != 0x12) {
-			printf("Wrong ID : 0x%x \n", version);
-		  }
-		  else{
-			  printf("True ID : 0x%x \n", version);
-		  }*/
-	 
-	    /*
-
-        spi_set_command(1,1,1) ; // Set one command bit to 1
-        spi_set_address(1,4,8) ; // Set 4 address bits to 8
-        spi_set_dummy_bits(1,4,false); // Set 4 dummy bit before Dout
-
-        spi_repeat_send_16(1,0xC584,10);  // Send 1 bit command + 4 bits address + 4 bits dummy + 160 bits data
-
-        spi_clear_address(1); // remove address
-        spi_clear_command(1); // remove command
-        spi_clear_dummy(1); // remove dummy
-		*/
-
-        time = sdk_system_get_time() -time ;
-        avr_time = ((avr_time * (float)u ) + (float)time)/((float)u+1.0)  ; // compute average
-        u++;
-        if (u==100) {
-            u=0 ;
-            printf("Time: %f\n",avr_time);
-        }
-        vTaskDelay(100/portTICK_PERIOD_MS);
+	  /*
+	  char counter_string[32];	  
+	  sprintf(counter_string, "%d", counter++);
+	  
+	  lora_begin_packet_default();
+	  lora_write_string("| 1 : ");
+	  lora_write_string(counter_string);
+	  
+	  lora_write_string(" | 2 : ");
+	  lora_write_string(counter_string);
+	  
+	  lora_write_string(" | 3 : ");
+	  lora_write_string(counter_string);
+	  
+	  lora_write_string(" | 4 : ");
+	  lora_write_string(counter_string);
+	  
+	  lora_write_string(" | 5 : ");
+	  lora_write_string(counter_string);
+	  lora_end_packet();
+	  //delay(1000);
+	  */
+	  
     }
 }
 
+void onReceive(int packetSize) {
+ 
+			// received a packet
+	printf("Received packet '");
+
+
+	for (int i = 0; i < packetSize; i++) {
+		printf("%c",(char)lora_read());
+	}
+				// print RSSI of packet
+	printf("' with RSSI ");
+	printf("%d\n",lora_packet_rssi());
+}
 
 void user_init(void)
 {
     uart_set_baud(0, 115200);
+    
+    if (!lora_begin(915E6)) {
+		printf("Starting LoRa failed!");
+		while (1);
+	}
+	
+	lora_set_coding_rate_4(8);
+	lora_set_spreading_factor(11);
+	lora_set_signal_bandwidth(41.7E3);
+	lora_set_tx_power_pa_boost(17);
+	//lora_enable_crc();
+	
+	  // register the receive callback
+	lora_on_receive(onReceive);
+
+  // put the radio into receive mode
+	lora_receive(0);
+   
     printf("SDK version:%s\n", sdk_system_get_sdk_version());
     xTaskCreate(loop, "loop", 1024, NULL, 2, NULL);
 }
-
-/* Arduino SPISlave
-  
-  
-    SPI Slave Demo Sketch
-    Connect the SPI Master device to the following pins on the esp8266:
-
-    GPIO    NodeMCU   Name  |   Uno
-  ===================================
-     15       D8       SS   |   D10
-     13       D7      MOSI  |   D11
-     12       D6      MISO  |   D12
-     14       D5      SCK   |   D13
-
-    Note: If the ESP is booting at a moment when the SPI Master has the Select line HIGH (deselected)
-    the ESP8266 WILL FAIL to boot!
-    See SPISlave_SafeMaster example for possible workaround
-
-
-
-#include "SPISlave.h"
-
-void setup()
-{
-    Serial.begin(115200);
-    //Serial.setDebugOutput(true);
-
-    // data has been received from the master. Beware that len is always 32
-    // and the buffer is autofilled with zeroes if data is less than 32 bytes long
-    // It's up to the user to implement protocol for handling data length
-    SPISlave.onData([](uint8_t * data, size_t len) {
-        String message = String((char *)data);
-        Serial.printf("Message: %s\n\r", (char *)data);
-    });
-
-    // Setup SPI Slave registers and pins
-    SPISlave.begin();
-}
-
-void loop() {}
-*/
