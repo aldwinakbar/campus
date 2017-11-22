@@ -1,10 +1,11 @@
 #include "espressif/esp_common.h"
 #include "esp/uart.h"
-
-#include "FreeRTOS.h"
+#include "lora/lora.h"
 #include "task.h"
 
-#include "lora/lora.h"
+inline void delay(int ms){
+	vTaskDelay(ms/portTICK_PERIOD_MS);
+}
 
 uint32_t counter = 0;
 void loop(void *pvParameters){
