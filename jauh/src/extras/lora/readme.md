@@ -18,28 +18,12 @@ An [Arduino](http://arduino.cc/) library for sending and receiving data using [L
 | SCK | SCK |
 | MISO | MISO |
 | MOSI | MOSI |
-| NSS | 10 |
-| NRESET | 9 |
-| DIO0 | 2 |
+| NSS | CS |
+| NRESET | 16 |
+| DIO0 | 5 |
 
 
-`NSS`, `NRESET`, and `DIO0` pins can be changed by using `LoRa.setPins(ss, reset, dio0)`. `DIO0` pin is optional, it is only needed for receive callback mode. If `DIO0` pin is used, it **must** be interrupt capable via [`attachInterrupt(...)`](https://www.arduino.cc/en/Reference/AttachInterrupt).
-
-## Installation
-
-### Using the Arduino IDE Library Manager
-
-1. Choose `Sketch` -> `Include Library` -> `Manage Libraries...`
-2. Type `LoRa` into the search box.
-3. Click the row to select the library.
-4. Click the `Install` button to install the library.
-
-### Using Git
-
-```sh
-cd ~/Documents/Arduino/libraries/
-git clone https://github.com/sandeepmistry/arduino-LoRa LoRa
-```
+`NSS`, `NRESET`, and `DIO0` pins can be changed by using `lora_set_pins(ss, reset, dio0)`. `DIO0` pin is optional, it is only needed for receive callback mode. If `DIO0` pin is used, it **must** be interrupt capable via [`attachInterrupt(...)`](https://www.arduino.cc/en/Reference/AttachInterrupt).
 
 ## API
 

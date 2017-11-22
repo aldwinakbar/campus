@@ -2,8 +2,8 @@
 
 ## Include Library
 
-```arduino
-#include <LoRa.h>
+```c
+#include "lora/lora.h"
 ```
 
 ## Setup
@@ -12,8 +12,8 @@
 
 Initialize the library with the specified frequency.
 
-```arduino
-LoRa.begin(frequency);
+```c
+lora_begin(frequency);
 ```
  * `frequency` - frequency in Hz (`433E6`, `866E6`, `915E6`)
 
@@ -21,10 +21,10 @@ Returns `1` on success, `0` on failure.
 
 ### Set pins
 
-Override the default `NSS`, `NRESET`, and `DIO0` pins used by the library. **Must** be called before `LoRa.begin()`.
+Override the default `NSS`, `NRESET`, and `DIO0` pins used by the library. **Must** be called before `lora_begin()`.
 
 ```arduino
-LoRa.setPins(ss, reset, dio0);
+lora_set_pins(ss, reset, dio0);
 ```
  * `ss` - new slave select pin to use, defaults to `10`
  * `reset` - new reset pin to use, defaults to `9`
@@ -37,19 +37,11 @@ This call is optional and only needs to be used if you need to change the defaul
 Override the default SPI frequency of 10 MHz used by the library. **Must** be called before `LoRa.begin()`.
 
 ```arduino
-LoRa.setSPIFrequency(frequency);
+lora_set_spi_frequency(frequency);
 ```
  * `frequency` - new SPI frequency to use, defaults to `8E6`
 
 This call is optional and only needs to be used if you need to change the default SPI frequency used. Some logic level converters cannot support high speeds such as 8 MHz, so a lower SPI frequency can be selected with `LoRa.setSPIFrequency(frequency)`.
-
-### End
-
-Stop the library
-
-```arduino
-LoRa.end()
-```
 
 ## Sending data
 

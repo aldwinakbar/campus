@@ -69,6 +69,10 @@ static  int _lora_frequency;
 static int _lora_packet_index;
 static int _lora_implicit_header_mode;
 static void (*_lora_on_receive)(int);
+static int _lora_spi_frequency = SPI_FREQ_DIV_8M;
+static int _lora_ss = DEFAULT_CS_PIN;
+static int _lora_reset = DEFAULT_RESET_PIN;
+static int _lora_dio0 = DEFAULT_IRQ_PIN;
 
 static uint8_t single_transfer(uint8_t address, uint8_t value);
 static uint8_t read_register(uint8_t address);
