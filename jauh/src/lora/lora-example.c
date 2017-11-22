@@ -72,6 +72,8 @@ void user_init(void)
 {
     uart_set_baud(0, 115200);
     
+    
+    lora_set_pins(15, DEFAULT_RESET_PIN, DEFAULT_IRQ_PIN);
     if (!lora_begin(915E6)) {
 		printf("Starting LoRa failed!");
 		while (1);

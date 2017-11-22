@@ -11,8 +11,9 @@
 #define SPI_WRITE_MASK 0x80
 #define SPI_READ_MASK 0x7f
 
-#define RESET_PIN				 16
-#define IRQ_PIN					 5
+#define DEFAULT_CS_PIN			15	// ESP8266 default CS pin
+#define DEFAULT_RESET_PIN		16
+#define DEFAULT_IRQ_PIN			5
 
 // registers
 #define REG_FIFO                 0x00
@@ -81,7 +82,8 @@ static void lora_on_dio0_rise(uint8_t gpio_num);
 static void lora_handle_dio0_rise();
 */
 
-
+void lora_set_pins(int ss, int reset, int dio0);
+void lora_set_spi_frequency(uint32_t spi_freq);
 int lora_begin(long frequency);
 void lora_end();
 

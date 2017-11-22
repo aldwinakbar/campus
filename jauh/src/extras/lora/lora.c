@@ -4,11 +4,18 @@ static int _lora_frequency = 0;
 static int _lora_packet_index = 0;
 static int _lora_implicit_header_mode = 0;
 static void (*_lora_on_receive)(int) = NULL;
+static int _lora_spi_frequency = SPI_FREQ_DIV_8M;
+static int _lora_ss = DEFAULT_CS_PIN;
+static int _lora_reset = DEFAULT_RESET_PIN;
+static int _lora_dio0 = DEFAULT_IRQ_PIN;
 
 static uint8_t single_transfer(uint8_t address, uint8_t value){
+	
+	if(_lora_ss != DEFAULT_CS_PIN) gpio_write(_lora_ss,0);
 	spi_set_address(1,8,address);
 	uint8_t data = spi_transfer_8(1, value);
 	spi_clear_address(1);
+	if(_lora_ss != DEFAULT_CS_PIN) gpio_write(_lora_ss,1);
 	return data;
 }
 
@@ -62,16 +69,30 @@ static void lora_on_dio0_rise(uint8_t gpio_num){
   lora_handle_dio0_rise();
 }
 
+void lora_set_pins(int ss, int reset, int dio0){
+	
+	_lora_ss = ss;
+	_lora_reset = reset;
+	_lora_dio0 = dio0;
+}
+
+void lora_set_spi_frequency(uint32_t spi_freq){
+	_lora_spi_frequency = spi_freq;
+}	
+
 int lora_begin(long frequency){
 	
-	gpio_enable(RESET_PIN, GPIO_OUTPUT);
+	if(_lora_ss != DEFAULT_CS_PIN) gpio_enable(_lora_ss, GPIO_OUTPUT);
+	gpio_enable(_lora_reset, GPIO_OUTPUT);
     
-    gpio_write(RESET_PIN, 0);
+    gpio_write(_lora_reset, 0);
     vTaskDelay(10/portTICK_PERIOD_MS);
-    gpio_write(RESET_PIN, 1);
+    gpio_write(_lora_reset, 1);
     vTaskDelay(10/portTICK_PERIOD_MS);
 	
-	spi_init(1, SPI_MODE0, SPI_FREQ_DIV_8M, 1, SPI_LITTLE_ENDIAN, false); // init SPI module
+	if(_lora_ss != DEFAULT_CS_PIN) gpio_write(_lora_ss,1);
+	
+	spi_init(1, SPI_MODE0, _lora_spi_frequency, 1, SPI_LITTLE_ENDIAN, ((_lora_ss != DEFAULT_CS_PIN)?true:false) ); // init SPI module
 	
 	uint8_t version = read_register(REG_VERSION);
 	if (version != 0x12) {
@@ -267,8 +288,8 @@ void lora_on_receive(void(*callback)(int)){
   if (callback) {
     write_register(REG_DIO_MAPPING_1, 0x00);
     
-	gpio_enable(IRQ_PIN, GPIO_INPUT);
-	gpio_set_interrupt(IRQ_PIN, GPIO_INTTYPE_EDGE_POS, lora_on_dio0_rise);
+	gpio_enable(_lora_dio0, GPIO_INPUT);
+	gpio_set_interrupt(_lora_dio0, GPIO_INTTYPE_EDGE_POS, lora_on_dio0_rise);
 	//printf("Interrupt Init Success!");
     //attachInterrupt(digitalPinToInterrupt(_dio0), LoRaClass::onDio0Rise, RISING);
   } else {
