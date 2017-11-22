@@ -13,7 +13,7 @@ An [Arduino](http://arduino.cc/) library for sending and receiving data using [L
 
 ### Semtech SX1276/77/78/79 wiring
 
-| Semtech SX1276/77/78/79 | Arduino |
+| Semtech SX1276/77/78/79 | ESP8266 |
 | :---------------------: | :------:|
 | VCC | 3.3V |
 | GND | GND |
