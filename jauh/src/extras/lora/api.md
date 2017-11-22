@@ -23,7 +23,7 @@ Returns `1` on success, `0` on failure.
 
 Override the default `NSS`, `NRESET`, and `DIO0` pins used by the library. **Must** be called before `lora_begin()`.
 
-```arduino
+```c
 lora_set_pins(ss, reset, dio0);
 ```
  * `ss` - new slave select pin to use, defaults to `10`
@@ -36,7 +36,7 @@ This call is optional and only needs to be used if you need to change the defaul
 
 Override the default SPI frequency of 10 MHz used by the library. **Must** be called before `LoRa.begin()`.
 
-```arduino
+```c
 lora_set_spi_frequency(frequency);
 ```
  * `frequency` - new SPI frequency to use, defaults to `8E6`
@@ -49,10 +49,10 @@ This call is optional and only needs to be used if you need to change the defaul
 
 Start the sequence of sending a packet.
 
-```arduino
-LoRa.beginPacket();
+```c
+lora_begin_packet_default();
 
-LoRa.beginPacket(implicitHeader);
+lora_begin_packet(implicitHeader);
 ```
 
  * `implicitHeader` - (optional) `true` enables implicit header mode, `false` enables explicit header mode (default)
@@ -63,28 +63,29 @@ Returns `1` on success, `0` on failure.
 
 Write data to the packet. Each packet can contain up to 255 bytes.
 
-```arduino
-LoRa.write(byte);
+```c
+lora_write(buffer, size);
 
-LoRa.write(buffer, length);
+lora_write_default(byte);
+
+lora_write_string(input);
 ```
 * `byte` - single byte to write to packet
+* `input` - a null-terminated string
 
 or
 
 * `buffer` - data to write to packet
-* `length` - size of data to write
+* `size` - size of data to write
 
 Returns the number of bytes written.
-
-**Note:** Other Arduino `Print` API's can also be used to write data into the packet
 
 ### End packet
 
 End the sequence of sending a packet.
 
-```arduino
-LoRa.endPacket()
+```c
+lora_end_packet()
 ```
 
 Returns `1` on success, `0` on failure.
@@ -95,10 +96,10 @@ Returns `1` on success, `0` on failure.
 
 Check if a packet has been received.
 
-```arduino
-int packetSize = LoRa.parsePacket();
+```c
+int packetSize = lora_parse_packet(0);
 
-int packetSize = LoRa.parsePacket(size);
+int packetSize = lora_parse_packet(size);
 ```
 
  * `size` - (optional) if `> 0` implicit header mode is enabled with the expected a packet of `size` bytes, default mode is explicit header mode
@@ -112,8 +113,8 @@ Returns the packet size in bytes or `0` if no packet was received.
 
 Register a callback function for when a packet is received.
 
-```arduino
-LoRa.onReceive(onReceive);
+```c
+lora_on_receive(onReceive);
 
 void onReceive(int packetSize) {
  // ...
@@ -126,10 +127,10 @@ void onReceive(int packetSize) {
 
 Puts the radio in continuous receive mode.
 
-```arduino
-LoRa.receive();
+```c
+lora_receive_default();
 
-LoRa.receive(int size);
+lora_receive(int size);
 ```
 
  * `size` - (optional) if `> 0` implicit header mode is enabled with the expected a packet of `size` bytes, default mode is explicit header mode
@@ -138,24 +139,24 @@ The `onReceive` callback will be called when a packet is received.
 
 ### Packet RSSI
 
-```arduino
-int rssi = LoRa.packetRssi();
+```c
+int rssi = lora_packet_rssi();
 ```
 
 Returns the RSSI of the received packet.
 
 ### Packet SNR
 
-```arduino
-float snr = LoRa.packetSnr();
+```c
+float snr = lora_packet_snr();
 ```
 
 Returns the estimated SNR of the received packet in dB.
 
 ### Available
 
-```arduino
-int availableBytes = LoRa.available()
+```c
+int availableBytes = lora_available()
 ```
 
 Returns number of bytes available for reading.
@@ -164,8 +165,8 @@ Returns number of bytes available for reading.
 
 Peek at the next byte in the packet.
 
-```arduino
-byte b = LoRa.peek();
+```c
+byte b = lora_peek();
 ```
 
 Returns the next byte in the packet or `-1` if no bytes are available.
@@ -174,8 +175,8 @@ Returns the next byte in the packet or `-1` if no bytes are available.
 
 Read the next byte from the packet.
 
-```arduino
-byte b = LoRa.read();
+```c
+byte b = lora_read();
 ```
 
 Returns the next byte in the packet or `-1` if no bytes are available.
@@ -188,16 +189,16 @@ Returns the next byte in the packet or `-1` if no bytes are available.
 
 Put the radio in idle (standby) mode.
 
-```arduino
-LoRa.idle();
+```c
+lora_idle();
 ```
 
 ### Sleep mode
 
 Put the radio in sleep mode.
 
-```arduino
-LoRa.sleep();
+```c
+lora_sleep();
 ```
 
 ## Radio parameters
@@ -206,10 +207,10 @@ LoRa.sleep();
 
 Change the TX power of the radio.
 
-```arduino
-LoRa.setTxPower(txPower);
+```c
+lora_set_tx_power_pa_boost(txPower);
 
-LoRa.setTxPower(txPower, outputPin);
+lora_set_tx_power(txPower, outputPin);
 ```
  * `txPower` - TX power in dB, defaults to `17`
  * `outputPin` - (optional) PA output pin, supported values are `PA_OUTPUT_RFO_PIN` and `PA_OUTPUT_PA_BOOST_PIN`, defaults to `PA_OUTPUT_PA_BOOST_PIN`.
@@ -222,8 +223,8 @@ Most modules have the PA output pin connected to PA BOOST,
 
 Change the frequency of the radio.
 
-```arduino
-LoRa.setFrequency(frequency);
+```c
+lora_set_frequency(frequency);
 ```
  * `frequency` - frequency in Hz (`433E6`, `866E6`, `915E6`)
 
@@ -231,8 +232,8 @@ LoRa.setFrequency(frequency);
 
 Change the spreading factor of the radio.
 
-```arduino
-LoRa.setSpreadingFactor(spreadingFactor);
+```c
+lora_set_spreading_factor(spreadingFactor);
 ```
  * `spreadingFactor` - spreading factor, defaults to `7`
 
@@ -242,8 +243,8 @@ Supported values are between `6` and `12`. If a spreading factor of `6` is set, 
 
 Change the signal bandwidth of the radio.
 
-```arduino
-LoRa.setSignalBandwidth(signalBandwidth);
+```c
+lora_set_signal_bandwidth(signalBandwidth);
 ```
 
  * `signalBandwidth` - signal bandwidth in Hz, defaults to `125E3`.
@@ -254,8 +255,8 @@ Supported values are `7.8E3`, `10.4E3`, `15.6E3`, `20.8E3`, `31.25E3`, `41.7E3`,
 
 Change the coding rate of the radio.
 
-```arduino
-LoRa.setCodingRate4(codingRateDenominator);
+```c
+lora_set_coding_rate_4(codingRateDenominator);
 ```
 
  * `codingRateDenominator` - denominator of the coding rate, defaults to `5`
@@ -266,8 +267,8 @@ Supported values are between `5` and `8`, these correspond to coding rates of `4
 
 Change the preamble length of the radio.
 
-```arduino
-LoRa.setPreambleLength(preambleLength);
+```c
+lora_set_preamble_length(preambleLength);
 ```
 
  * `preambleLength` - preamble length in symbols, defaults to `8`
@@ -278,8 +279,8 @@ Supported values are between `6` and `65535`.
 
 Change the sync word of the radio.
 
-```arduino
-LoRa.setSyncWord(syncWord);
+```c
+lora_set_sync_word(syncWord);
 ```
 
  * `syncWord` - byte value to use as the sync word, defaults to `0x34`
@@ -288,10 +289,10 @@ LoRa.setSyncWord(syncWord);
 
 Enable or disable CRC usage, by default a CRC is not used.
 
-```arduino
-LoRa.enableCrc();
+```c
+lora_enable_crc();
 
-LoRa.disableCrc();
+lora_disable_crc();
 ```
 
 ## Other functions
@@ -301,7 +302,7 @@ LoRa.disableCrc();
 Generate a random byte, based on the Wideband RSSI measurement.
 
 ```
-byte b = LoRa.random();
+byte b = lora_random();
 ```
 
 Returns random byte.

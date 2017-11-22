@@ -1,6 +1,6 @@
-# Arduino LoRa
+# ESP-Open-RTOS LoRa
 
-An [Arduino](http://arduino.cc/) library for sending and receiving data using [LoRa](https://www.lora-alliance.org/) radios.
+An [esp-open-rtos](https://github.com/SuperHouse/esp-open-rtos) library for sending and receiving data using [LoRa](https://www.lora-alliance.org/) radios.
 
 ## Compatible Hardware
 
@@ -23,15 +23,11 @@ An [Arduino](http://arduino.cc/) library for sending and receiving data using [L
 | DIO0 | 5 |
 
 
-`NSS`, `NRESET`, and `DIO0` pins can be changed by using `lora_set_pins(ss, reset, dio0)`. `DIO0` pin is optional, it is only needed for receive callback mode. If `DIO0` pin is used, it **must** be interrupt capable via [`attachInterrupt(...)`](https://www.arduino.cc/en/Reference/AttachInterrupt).
+`NSS`, `NRESET`, and `DIO0` pins can be changed by using `lora_set_pins(ss, reset, dio0)`. `DIO0` pin is optional, it is only needed for receive callback mode. If `DIO0` pin is used, it **must** be interrupt capable.
 
 ## API
 
-See [API.md](API.md).
-
-## Examples
-
-See [examples](examples) folder.
+See [api.md](api.md).
 
 ## License
 
