@@ -58,7 +58,7 @@ if [ "$EXIT_STATUS" = "no" ] ; then
 
 		for i in *.c; do
 			echo "compiling $i"
-			gcc -ggdb `pkg-config --cflags opencv` -o `basename $i .c` $i `pkg-config --libs opencv `;
+			gcc -ggdb -o `basename $i .c` $i ;
 			#gcc $i $INCLUDE $LIBRARIES $CXXFLAGS -o `basename $i .c`;
 			
 			if [ -f `basename $i .c` ]; then
@@ -75,7 +75,7 @@ if [ "$EXIT_STATUS" = "no" ] ; then
 
 		for i in *.cpp; do
 			echo "compiling $i"
-            g++ -ggdb `pkg-config --cflags opencv` -o `basename $i .cpp` $i `pkg-config --libs opencv` -std=c++14 -lpthread;
+            g++ -ggdb -o `basename $i .cpp` $i -std=c++14 -lpthread;
 
 			if [ -f `basename $i .cpp` ]; then
 				mv `basename $i .cpp` ../build/
