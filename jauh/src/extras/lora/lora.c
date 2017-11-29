@@ -126,8 +126,6 @@ void lora_end(){
   lora_sleep();
 }
 
-
-
 int lora_begin_packet(int implicitHeader){
   // put in standby mode
   lora_idle();

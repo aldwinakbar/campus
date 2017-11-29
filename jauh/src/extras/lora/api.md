@@ -26,22 +26,22 @@ Override the default `NSS`, `NRESET`, and `DIO0` pins used by the library. **Mus
 ```c
 lora_set_pins(ss, reset, dio0);
 ```
- * `ss` - new slave select pin to use, defaults to `10`
- * `reset` - new reset pin to use, defaults to `9`
- * `dio0` - new DIO0 pin to use, defaults to `2`.  **Must** be interrupt capable via [attachInterrupt(...)](https://www.arduino.cc/en/Reference/AttachInterrupt).
+ * `ss` - new slave select pin to use, defaults to `15`
+ * `reset` - new reset pin to use, defaults to `16`
+ * `dio0` - new DIO0 pin to use, defaults to `5`.  **Must** be interrupt capable.
 
 This call is optional and only needs to be used if you need to change the default pins used.
 
 ### Set SPI Frequency
 
-Override the default SPI frequency of 10 MHz used by the library. **Must** be called before `LoRa.begin()`.
+Override the default SPI frequency of 10 MHz used by the library. **Must** be called before `lora_begin()`.
 
 ```c
 lora_set_spi_frequency(frequency);
 ```
- * `frequency` - new SPI frequency to use, defaults to `8E6`
+ * `frequency` - new SPI frequency to use, defaults to `SPI_FREQ_DIV_8M`. Available predefined values are SPI_FREQ_DIV_125K, SPI_FREQ_DIV_250K, SPI_FREQ_DIV_500K, SPI_FREQ_DIV_1M, SPI_FREQ_DIV_2M, SPI_FREQ_DIV_4M, SPI_FREQ_DIV_8M, SPI_FREQ_DIV_10M, SPI_FREQ_DIV_20M, SPI_FREQ_DIV_40M, and SPI_FREQ_DIV_80M.
 
-This call is optional and only needs to be used if you need to change the default SPI frequency used. Some logic level converters cannot support high speeds such as 8 MHz, so a lower SPI frequency can be selected with `LoRa.setSPIFrequency(frequency)`.
+This call is optional and only needs to be used if you need to change the default SPI frequency used. Some logic level converters cannot support high speeds such as 8 MHz, so a lower SPI frequency can be selected with `lora_set_spi_frequency(frequency)`.
 
 ## Sending data
 
@@ -50,12 +50,12 @@ This call is optional and only needs to be used if you need to change the defaul
 Start the sequence of sending a packet.
 
 ```c
-lora_begin_packet_default();
-
 lora_begin_packet(implicitHeader);
-```
 
- * `implicitHeader` - (optional) `true` enables implicit header mode, `false` enables explicit header mode (default)
+lora_begin_packet_default();
+```
+ * `implicitHeader` - value of `true` enables implicit header mode, `false` enables explicit header mode.
+ * lora_begin_packet_default() sets `implicitHeader` to false. 
 
 Returns `1` on success, `0` on failure.
 
@@ -70,13 +70,17 @@ lora_write_default(byte);
 
 lora_write_string(input);
 ```
-* `byte` - single byte to write to packet
-* `input` - a null-terminated string
-
-or
 
 * `buffer` - data to write to packet
 * `size` - size of data to write
+
+or
+
+* `byte` - single byte to write to packet
+
+or
+
+* `input` - a null-terminated string
 
 Returns the number of bytes written.
 
@@ -102,7 +106,7 @@ int packetSize = lora_parse_packet(0);
 int packetSize = lora_parse_packet(size);
 ```
 
- * `size` - (optional) if `> 0` implicit header mode is enabled with the expected a packet of `size` bytes, default mode is explicit header mode
+ * if `size > 0` implicit header mode is enabled with the expected a packet of `size` bytes, else if `size == 0` explicit header mode is enabled
 
 
 Returns the packet size in bytes or `0` if no packet was received.
@@ -133,7 +137,8 @@ lora_receive_default();
 lora_receive(int size);
 ```
 
- * `size` - (optional) if `> 0` implicit header mode is enabled with the expected a packet of `size` bytes, default mode is explicit header mode
+ * lora_receive_default() set `size` to 0, enabling explicit header mode
+ * if `size > 0` implicit header mode is enabled with the expected a packet of `size` bytes
 
 The `onReceive` callback will be called when a packet is received.
 
@@ -156,7 +161,7 @@ Returns the estimated SNR of the received packet in dB.
 ### Available
 
 ```c
-int availableBytes = lora_available()
+int availableBytes = lora_available();
 ```
 
 Returns number of bytes available for reading.
@@ -166,7 +171,7 @@ Returns number of bytes available for reading.
 Peek at the next byte in the packet.
 
 ```c
-byte b = lora_peek();
+uint8_t b = lora_peek();
 ```
 
 Returns the next byte in the packet or `-1` if no bytes are available.
@@ -176,12 +181,10 @@ Returns the next byte in the packet or `-1` if no bytes are available.
 Read the next byte from the packet.
 
 ```c
-byte b = lora_read();
+uint8_t b = lora_read();
 ```
 
 Returns the next byte in the packet or `-1` if no bytes are available.
-
-**Note:** Other Arduino [`Stream` API's](https://www.arduino.cc/en/Reference/Stream) can also be used to read data from the packet
 
 ## Other radio modes
 
@@ -208,12 +211,13 @@ lora_sleep();
 Change the TX power of the radio.
 
 ```c
-lora_set_tx_power_pa_boost(txPower);
-
 lora_set_tx_power(txPower, outputPin);
+
+lora_set_tx_power_pa_boost(txPower);
 ```
  * `txPower` - TX power in dB, defaults to `17`
- * `outputPin` - (optional) PA output pin, supported values are `PA_OUTPUT_RFO_PIN` and `PA_OUTPUT_PA_BOOST_PIN`, defaults to `PA_OUTPUT_PA_BOOST_PIN`.
+ * `outputPin` - PA output pin, supported values are `PA_OUTPUT_RFO_PIN` and `PA_OUTPUT_PA_BOOST_PIN`.
+ * `lora_set_tx_power_pa_boost()` - set outputPin to `PA_OUTPUT_PA_BOOST_PIN`.
 
 Supported values are between `2` and `17` for `PA_OUTPUT_PA_BOOST_PIN`, `0` and `14` for `PA_OUTPUT_RFO_PIN`.
 
