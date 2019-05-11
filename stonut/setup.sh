@@ -22,10 +22,10 @@ install_deb_package() {
 }
 package_install(){
 	
-		if pip list | grep -F $1 &> /dev/null 2>&1; then
-			pip install $1 --upgrade
+		if pip3 list | grep -F $1 &> /dev/null 2>&1; then
+			pip3 install $1 --upgrade
 		else
-			pip install $1
+			pip3 install $1
 		fi	
 }
 
@@ -38,7 +38,7 @@ install_pip_package() {
 	if [[ $answer =~ [Yy] ]]; then # we can compare directly with this syntax.
 		
 		package_install requests
-		package_install telepot
+		package_install python-telegram-bot
 		echo 		
 	else
 		echo "Continuing without installing required python package."
@@ -51,11 +51,11 @@ if [[ $EUID > 0 ]]; then # we can compare directly with this syntax.
 else
 	
 		apt-get update
-		install_deb_package python-pip
+		install_deb_package python3-pip
 		install_deb_package unzip
 		install_pip_package
 		
-		wget https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-arm.zip -O temp.zip && unzip temp.zip && rm temp.zip
+		wget https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip -O temp.zip && unzip temp.zip && rm temp.zip
 		
 		read -p "Insert your Ngrok Authentication token: " input
 		
@@ -65,7 +65,7 @@ else
 		read -p "Insert your Telegram Bot token: " input
 				
 		telegram_token="telegram_token = '$input'"
-		sed -i "8i $telegram_token" src/telegram-bot.py
+		sed -i "10i $telegram_token" src/telegram-bot.py
 		
 		mkdir stonut
 		cp -rf src/* stonut/
